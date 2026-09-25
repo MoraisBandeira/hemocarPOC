@@ -1603,7 +1603,20 @@ function esconderAlertaVisual() {
   pararFlashTitulo();
 }
 
-// Alerta sonoro via Web Audio API (sem arquivos externos).
+// Alerta sonoro: toca o mp3 cadastrado em assets/. Se por algum motivo não
+// der pra tocar (arquivo ausente, navegador bloqueando áudio etc.), cai para
+// um bipe sintético via Web Audio API como reserva, sem depender de arquivo.
+const SOM_ALERTA_URL = "assets/alerta-novo-pedido.mp3";
+let elementoAudioAlerta = null;
+
+function garantirElementoAudioAlerta() {
+  if (!elementoAudioAlerta) {
+    elementoAudioAlerta = new Audio(SOM_ALERTA_URL);
+    elementoAudioAlerta.preload = "auto";
+  }
+  return elementoAudioAlerta;
+}
+
 let audioCtx = null;
 
 function garantirAudioContext() {
@@ -1614,7 +1627,23 @@ function garantirAudioContext() {
   return audioCtx;
 }
 
-function tocarAlertaSonoro() {
+/** Desbloqueia o áudio (elemento <audio> + AudioContext) a partir do primeiro gesto do usuário. */
+function desbloquearAudio() {
+  garantirAudioContext();
+  try {
+    const audio = garantirElementoAudioAlerta();
+    audio.play()
+      .then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+      })
+      .catch(() => {}); // sem gesto suficiente ainda; tenta de novo no próximo clique
+  } catch (e) {
+    // ignora — o bipe sintético de reserva ainda funciona
+  }
+}
+
+function tocarBipeSintetico() {
   try {
     const ctx = garantirAudioContext();
     if (!ctx) return;
@@ -1633,7 +1662,24 @@ function tocarAlertaSonoro() {
     tocarTom(880, 0, 0.14);
     tocarTom(1180, 0.16, 0.18);
   } catch (e) {
-    console.warn("Não foi possível tocar o alerta sonoro:", e);
+    console.warn("Não foi possível tocar o bipe sintético de reserva:", e);
+  }
+}
+
+function tocarAlertaSonoro() {
+  try {
+    const audio = garantirElementoAudioAlerta();
+    audio.currentTime = 0;
+    const promessa = audio.play();
+    if (promessa?.catch) {
+      promessa.catch((e) => {
+        console.warn("Não foi possível tocar o som do alerta, usando bipe de reserva:", e);
+        tocarBipeSintetico();
+      });
+    }
+  } catch (e) {
+    console.warn("Não foi possível tocar o som do alerta, usando bipe de reserva:", e);
+    tocarBipeSintetico();
   }
 }
 
@@ -1907,7 +1953,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // desbloqueia o áudio a partir do primeiro gesto do usuário (política dos navegadores)
-  document.addEventListener("click", garantirAudioContext);
+  document.addEventListener("click", desbloquearAudio);
 
   // conecta ao servidor: carrega o estado inicial e escuta atualizações em
   // tempo real (SSE) — cada `render()` seguinte reflete o que TODOS os

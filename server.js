@@ -17,7 +17,7 @@ const RAIZ = __dirname;
 // para nunca disputar o mesmo data/db.json com uma instância real rodando em paralelo)
 const PASTA_DADOS = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(RAIZ, "data");
 const ARQUIVO_DB = path.join(PASTA_DADOS, "db.json");
-const PORTA = process.env.PORT || 3000;
+const PORTA = process.env.PORT || 8000;
 
 class ErroApi extends Error {
   constructor(status, mensagem) {
@@ -684,6 +684,7 @@ const TIPOS_MIME = {
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".mp3": "audio/mpeg",
 };
 
 function tratarEstatico(req, res, url) {

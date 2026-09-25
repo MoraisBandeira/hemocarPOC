@@ -11,7 +11,7 @@ Front-end em HTML/CSS/JS puro (sem frameworks) + um backend mínimo em Node.js u
    ```
    node server.js
    ```
-3. Abra `http://localhost:3000` no navegador. Para simular Solicitante e Equipe de Transporte ao mesmo tempo, abra a mesma URL em **dois navegadores diferentes** (ou duas abas/janelas) — os dois falam com o mesmo servidor e se sincronizam automaticamente.
+3. Abra `http://localhost:8000` no navegador. Para simular Solicitante e Equipe de Transporte ao mesmo tempo, abra a mesma URL em **dois navegadores diferentes** (ou duas abas/janelas) — os dois falam com o mesmo servidor e se sincronizam automaticamente.
 
 Para usar outra porta: `PORT=4000 node server.js`.
 
@@ -50,7 +50,7 @@ O botão "Restaurar dados de exemplo" no rodapé apaga tudo no servidor e recria
 - Sempre que um pedido é criado, aprovado, rejeitado ou concluído, o servidor registra uma notificação já marcada com o público-alvo (`transporte` ou o nome do solicitante específico) e transmite para todos os navegadores conectados.
 - Com o perfil **Equipe de Transporte** ativo, todo **novo pedido** dispara automaticamente:
   - um **banner visual** no topo da tela (com pulso e auto-fechamento em ~6s, ou fechamento manual);
-  - um **alerta sonoro** (dois tons curtos, gerados via Web Audio API — sem arquivo de áudio externo);
+  - um **alerta sonoro** (toca `assets/alerta-novo-pedido.mp3`; se não der pra tocar por algum motivo, cai para um bipe sintético gerado via Web Audio API como reserva);
   - o **sino piscando/pulsando** e o **título da aba piscando** enquanto o alerta não é fechado.
 - Isso funciona entre navegadores/computadores genuinamente diferentes (testado com dois processos de navegador isolados) — não depende de abas do mesmo navegador.
 - Alertas sonoros exigem uma interação prévia do usuário na página (política dos navegadores); qualquer clique já habilita o áudio para os próximos alertas.
@@ -80,6 +80,7 @@ index.html      estrutura da página e das abas
 css/style.css   estilos (sem libs externas)
 js/api.js       cliente HTTP: fala com server.js, mantém cache local atualizado via SSE
 js/app.js       estado da UI, renderização das telas e eventos
+assets/         arquivos estáticos (ex.: alerta-novo-pedido.mp3, som do alerta de novo pedido)
 ```
 
 ## Modelo de dados (simplificado)
