@@ -19,6 +19,46 @@ Para rodar uma segunda instância **sem interferir** nos dados da primeira (ex.:
 
 Depois de editar `server.js`, é preciso **reiniciar o processo** (parar com `Ctrl+C` e rodar `node server.js` de novo) para as mudanças valerem — o Node não recarrega o código sozinho.
 
+## Deixar rodando no servidor (em segundo plano, sobrevivendo ao logout)
+
+Rodar `node server.js` direto no terminal só funciona enquanto essa sessão SSH estiver aberta — ao desconectar, o processo morre. Três jeitos de resolver, do mais simples ao mais robusto:
+
+1. **`nohup` (rápido, sem instalar nada)**:
+   ```
+   nohup node server.js > server.log 2>&1 &
+   disown
+   ```
+   Continua rodando após você sair do SSH, mas não reinicia sozinho se cair, nem sobe de novo se o servidor reiniciar.
+
+2. **`pm2` (gerenciador de processos Node)** — meio-termo, fácil de instalar mesmo sem root:
+   ```
+   npm install -g pm2        # ou: npx pm2 ...
+   pm2 start server.js --name hemocar
+   pm2 save
+   pm2 startup               # segue as instruções impressas para iniciar junto com o servidor
+   ```
+   `pm2 logs hemocar`, `pm2 restart hemocar` e `pm2 stop hemocar` para gerenciar depois.
+
+3. **`systemd` (mais robusto, exige acesso root/sudo)** — reinicia sozinho se o processo cair e sobe automaticamente no boot. Tem um modelo pronto em [`deploy/hemocar.service`](deploy/hemocar.service):
+   ```
+   sudo cp deploy/hemocar.service /etc/systemd/system/hemocar.service
+   sudo nano /etc/systemd/system/hemocar.service   # ajuste User, WorkingDirectory e PORT
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now hemocar
+   sudo systemctl status hemocar                   # confirma que subiu
+   journalctl -u hemocar -f                        # acompanha os logs em tempo real
+   ```
+
+4. **Docker** — não precisa ter Node instalado no servidor, só Docker. Já tem `Dockerfile` e `docker-compose.yml` prontos no projeto:
+   ```
+   docker compose up -d --build
+   ```
+   Isso builda a imagem, sobe o container publicando a porta 8000 e monta `./data` como volume — os dados sobrevivem a `docker compose down`/`up` e a rebuilds da imagem. Pra acompanhar os logs: `docker compose logs -f`. Pra parar: `docker compose down` (sem `-v`, senão isso mexe em volumes nomeados — não é o caso aqui, mas é hábito seguro). Pra trocar a porta publicada, edite `ports:` no `docker-compose.yml`.
+
+   **Importante**: antes de rodar `docker compose up`, garanta que a porta 8000 (ou a que você configurou) esteja livre — pare qualquer `node server.js` ou outro container já usando ela. Durante o desenvolvimento desta PoC, uma tentativa de subir o container com a porta já ocupada por outro processo (que falhou por causa do conflito) foi seguida de um `docker compose run` avulso com override de porta — e os pedidos que estavam salvos em `data/db.json` acabaram zerados nesse meio-tempo, sem eu conseguir reproduzir o mecanismo exato depois, isolado. Não é um risco confirmado do fluxo normal (`docker compose up`/`down` sozinhos, testados várias vezes, sempre preservaram os dados), mas por precaução: **evite `docker compose run` com porta customizada no dia a dia, e não tente subir o container com a porta de destino já ocupada** — pare o que estiver nela primeiro.
+
+Em qualquer uma das opções, o app continua guardando tudo em `data/db.json` dentro da pasta do projeto — inclua essa pasta num backup se os dados importarem, e considere usar um proxy reverso (Nginx/Caddy) na frente se for expor numa porta 80/443 com HTTPS.
+
 ## Como usar
 
 1. No topo, selecione o **perfil ativo**: "Solicitante", "Equipe de Transporte" ou "Portaria".

@@ -1,0 +1,16 @@
+[Unit]
+Description=HemoCar - PoC de Logistica de Transporte
+After=network.target
+
+[Service]
+Type=simple
+# Ajuste para o usuário e caminho reais no servidor:
+User=SEU_USUARIO
+WorkingDirectory=/caminho/para/hemocar
+ExecStart=/usr/bin/node server.js
+Environment=PORT=8000
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
