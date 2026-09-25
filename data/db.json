@@ -1,0 +1,306 @@
+{
+  "motoristas": [
+    {
+      "id": "mot-468aa257-2a9c-469f-a760-da47db747417",
+      "nome": "Carlos Andrade",
+      "cnh": "D",
+      "criadoEm": "2026-09-24T16:40:59.618Z"
+    },
+    {
+      "id": "mot-2066a88e-c804-48cc-a96b-6abebadd58be",
+      "nome": "Fernanda Lima",
+      "cnh": "D",
+      "criadoEm": "2026-09-24T16:40:59.618Z"
+    },
+    {
+      "id": "mot-98efa1d2-36f8-4f48-8a66-c4d1ad35f926",
+      "nome": "João Pereira",
+      "cnh": "E",
+      "criadoEm": "2026-09-24T16:40:59.618Z"
+    }
+  ],
+  "veiculos": [
+    {
+      "id": "vei-9969f974-7e4c-49d9-bedf-afae6550578d",
+      "placa": "HMC-1A23",
+      "modelo": "Fiat Doblô (refrigerado)",
+      "capacidade": "8 caixas térmicas",
+      "criadoEm": "2026-09-24T16:40:59.618Z"
+    },
+    {
+      "id": "vei-29ac8014-3427-4fc6-840d-cd58acdc4c2b",
+      "placa": "HMC-4B56",
+      "modelo": "Renault Master (van)",
+      "capacidade": "20 caixas térmicas",
+      "criadoEm": "2026-09-24T16:40:59.618Z"
+    },
+    {
+      "id": "vei-99659fd6-8e58-4886-b474-1d6c50028f13",
+      "placa": "HMC-7C89",
+      "modelo": "Fiat Strada",
+      "capacidade": "3 caixas térmicas",
+      "criadoEm": "2026-09-24T16:40:59.618Z"
+    }
+  ],
+  "hospitais": [
+    {
+      "id": "hos-89323d97-b949-4b86-b5c5-2f80ed6aaac1",
+      "nome": "Hospital Geral de Fortaleza (HGF)",
+      "cidade": "Fortaleza/CE",
+      "endereco": "Rua Ávila Goulart, 900 - Papicu",
+      "telefone": "(85) 3101-2500",
+      "criadoEm": "2026-09-24T16:40:59.618Z",
+      "regional": "Regional 2"
+    },
+    {
+      "id": "hos-73d92a4e-f98c-4edb-8200-8e450a86f7ce",
+      "nome": "Hospital Universitário Walter Cantídio",
+      "cidade": "Fortaleza/CE",
+      "endereco": "Rua Pastor Samuel Munguba, 1290 - Rodolfo Teófilo",
+      "telefone": "(85) 3366-8000",
+      "criadoEm": "2026-09-24T16:40:59.618Z",
+      "regional": "Regional 3"
+    },
+    {
+      "id": "hos-632c7ac6-d5ac-4f75-8822-11dcc63516c3",
+      "nome": "Hospital Infantil Albert Sabin",
+      "cidade": "Fortaleza/CE",
+      "endereco": "Rua Tertuliano Sales, 544 - Vila União",
+      "telefone": "(85) 3101-2300",
+      "criadoEm": "2026-09-24T16:40:59.618Z",
+      "regional": "Regional 4"
+    },
+    {
+      "id": "hos-25e4d4e4-bc48-4534-9fb5-9d21af27ad0a",
+      "nome": "Hospital Regional do Cariri",
+      "cidade": "Juazeiro do Norte/CE",
+      "endereco": "Rua São José, 1000",
+      "telefone": "(88) 3572-1100",
+      "criadoEm": "2026-09-24T16:40:59.618Z",
+      "regional": "Regional Cariri"
+    },
+    {
+      "id": "hos-8b65c1f2-0de5-4b56-8088-29e3b9cf5bd6",
+      "nome": "Hospital Regional Norte",
+      "cidade": "Sobral/CE",
+      "endereco": "Av. Dom José, 500",
+      "telefone": "(88) 3677-2200",
+      "criadoEm": "2026-09-24T16:40:59.618Z",
+      "regional": "Regional Norte"
+    }
+  ],
+  "pedidos": [
+    {
+      "id": "ped-5cba63c3-2758-4b5d-9bf8-0fa886b5fa6f",
+      "solicitante": "Anderson",
+      "setor": "central",
+      "origem": "HEMOCE - Sede",
+      "destino": "Hospital Geral de Fortaleza",
+      "dataDesejada": "2026-09-24T16:48",
+      "tipo": "coleta",
+      "prioridade": "normal",
+      "observacoes": "",
+      "status": "concluido",
+      "motivoRejeicao": null,
+      "rotaId": "rot-23666035-a7b3-4ef7-a449-25dbd4421668",
+      "criadoEm": "2026-09-24T16:48:25.384Z",
+      "atualizadoEm": "2026-09-24T18:00:23.314Z"
+    },
+    {
+      "id": "ped-d9eb31bc-5661-456d-86d3-8de510361642",
+      "solicitante": "Anderson",
+      "setor": "central",
+      "origem": "HEMOCE - Sede",
+      "destino": "Hospital Geral de Fortaleza",
+      "dataDesejada": "2026-09-24T16:48",
+      "tipo": "coleta",
+      "prioridade": "normal",
+      "observacoes": "",
+      "status": "concluido",
+      "motivoRejeicao": null,
+      "rotaId": "rot-23666035-a7b3-4ef7-a449-25dbd4421668",
+      "criadoEm": "2026-09-24T16:48:50.908Z",
+      "atualizadoEm": "2026-09-24T18:00:23.314Z"
+    },
+    {
+      "id": "ped-3bfe6e24-9d0e-4e66-8fc6-657e974e7418",
+      "solicitante": "Anderson",
+      "setor": "central",
+      "origem": "HEMOCE - Sede",
+      "destino": "Hospital Geral de Fortaleza",
+      "dataDesejada": "2026-09-24T16:11",
+      "tipo": "coleta",
+      "prioridade": "normal",
+      "observacoes": "",
+      "status": "concluido",
+      "motivoRejeicao": null,
+      "rotaId": "rot-aa47d043-c9e6-41af-8e63-589613980e6c",
+      "criadoEm": "2026-09-24T17:11:37.335Z",
+      "atualizadoEm": "2026-09-25T10:29:04.814Z"
+    },
+    {
+      "id": "ped-09f2a748-94c0-4020-a698-88cd3f94a105",
+      "solicitante": "Anderson",
+      "setor": "central",
+      "origem": "HEMOCE - Sede",
+      "destino": "Hospital Geral de Fortaleza",
+      "dataDesejada": "2026-09-24T17:19",
+      "tipo": "coleta",
+      "prioridade": "normal",
+      "observacoes": "",
+      "status": "concluido",
+      "motivoRejeicao": null,
+      "rotaId": "rot-aa47d043-c9e6-41af-8e63-589613980e6c",
+      "criadoEm": "2026-09-24T17:19:51.613Z",
+      "atualizadoEm": "2026-09-25T10:29:04.814Z"
+    },
+    {
+      "id": "ped-625e043d-5f66-4b2d-bd4b-5daf2585e578",
+      "solicitante": "Anderson",
+      "setor": "central",
+      "origem": "Hospital Geral de Fortaleza (HGF)",
+      "destino": "Hospital Regional Norte",
+      "dataDesejada": "2026-09-25T09:30",
+      "tipo": "coleta",
+      "prioridade": "normal",
+      "observacoes": "asdsadasdasd",
+      "status": "pendente",
+      "motivoRejeicao": null,
+      "rotaId": null,
+      "criadoEm": "2026-09-25T10:34:37.911Z",
+      "atualizadoEm": "2026-09-25T10:34:37.911Z"
+    },
+    {
+      "id": "ped-269c640e-158f-424a-b256-0c28886461e6",
+      "solicitante": "Anderson",
+      "setor": "central",
+      "origem": "Hospital Geral de Fortaleza (HGF)",
+      "destino": "Hospital Regional Norte",
+      "dataDesejada": "2026-09-25T15:35",
+      "tipo": "coleta",
+      "prioridade": "normal",
+      "observacoes": "",
+      "status": "pendente",
+      "motivoRejeicao": null,
+      "rotaId": null,
+      "criadoEm": "2026-09-25T10:35:34.327Z",
+      "atualizadoEm": "2026-09-25T10:35:34.327Z"
+    }
+  ],
+  "rotas": [
+    {
+      "id": "rot-23666035-a7b3-4ef7-a449-25dbd4421668",
+      "pedidoIds": [
+        "ped-d9eb31bc-5661-456d-86d3-8de510361642",
+        "ped-5cba63c3-2758-4b5d-9bf8-0fa886b5fa6f"
+      ],
+      "motoristaId": "mot-468aa257-2a9c-469f-a760-da47db747417",
+      "veiculoId": "vei-9969f974-7e4c-49d9-bedf-afae6550578d",
+      "horarioSaida": "2026-09-24T17:48",
+      "status": "concluida",
+      "criadoEm": "2026-09-24T16:49:12.947Z",
+      "previsaoTermino": "2026-09-24T19:10",
+      "atualizadoEm": "2026-09-24T17:11:05.781Z",
+      "kmSaida": null,
+      "horarioSaidaReal": null,
+      "kmChegada": null,
+      "horarioChegadaReal": null
+    },
+    {
+      "id": "rot-aa47d043-c9e6-41af-8e63-589613980e6c",
+      "pedidoIds": [
+        "ped-09f2a748-94c0-4020-a698-88cd3f94a105",
+        "ped-3bfe6e24-9d0e-4e66-8fc6-657e974e7418"
+      ],
+      "motoristaId": "mot-2066a88e-c804-48cc-a96b-6abebadd58be",
+      "veiculoId": "vei-9969f974-7e4c-49d9-bedf-afae6550578d",
+      "horarioSaida": "2026-09-24T16:11",
+      "previsaoTermino": "2026-09-24T18:11",
+      "status": "concluida",
+      "criadoEm": "2026-09-24T18:32:45.956Z",
+      "kmSaida": 6598,
+      "horarioSaidaReal": "2026-09-24T15:39",
+      "kmChegada": 987645,
+      "horarioChegadaReal": "2026-09-25T07:28"
+    }
+  ],
+  "notificacoes": [
+    {
+      "id": "not-66e59fbe-f5a8-4a54-86e2-b343a5daac33",
+      "tipo": "novo_pedido",
+      "titulo": "Novo pedido de transporte",
+      "mensagem": "Anderson solicitou transporte: HEMOCE - Sede → Hospital Geral de Fortaleza.",
+      "publico": "transporte",
+      "solicitanteNome": null,
+      "pedidoId": "ped-d9eb31bc-5661-456d-86d3-8de510361642",
+      "lida": true,
+      "criadoEm": "2026-09-24T16:48:50.908Z"
+    },
+    {
+      "id": "not-cf925501-4b1a-41b9-86b2-383db7fc71f2",
+      "tipo": "novo_pedido",
+      "titulo": "Novo pedido de transporte",
+      "mensagem": "Anderson solicitou transporte: HEMOCE - Sede → Hospital Geral de Fortaleza.",
+      "publico": "transporte",
+      "solicitanteNome": null,
+      "pedidoId": "ped-3bfe6e24-9d0e-4e66-8fc6-657e974e7418",
+      "lida": true,
+      "criadoEm": "2026-09-24T17:11:37.335Z"
+    },
+    {
+      "id": "not-c16e389a-5a73-4bde-bd68-749b878ec718",
+      "tipo": "novo_pedido",
+      "titulo": "Novo pedido de transporte",
+      "mensagem": "Anderson solicitou transporte: HEMOCE - Sede → Hospital Geral de Fortaleza.",
+      "publico": "transporte",
+      "solicitanteNome": null,
+      "pedidoId": "ped-09f2a748-94c0-4020-a698-88cd3f94a105",
+      "lida": true,
+      "criadoEm": "2026-09-24T17:19:51.613Z"
+    },
+    {
+      "id": "not-263a68a3-19ba-4d8e-a41c-171fafffb2c8",
+      "tipo": "rota_concluida",
+      "titulo": "Transporte concluído",
+      "mensagem": "Seu pedido (HEMOCE - Sede → Hospital Geral de Fortaleza) foi concluído. Chegada às 2026-09-25T07:28 (KM 987645).",
+      "publico": "solicitante",
+      "solicitanteNome": "Anderson",
+      "pedidoId": "ped-09f2a748-94c0-4020-a698-88cd3f94a105",
+      "lida": true,
+      "criadoEm": "2026-09-25T10:29:04.814Z"
+    },
+    {
+      "id": "not-7dfe31d8-8bed-4fbd-8667-db37e7209aed",
+      "tipo": "rota_concluida",
+      "titulo": "Transporte concluído",
+      "mensagem": "Seu pedido (HEMOCE - Sede → Hospital Geral de Fortaleza) foi concluído. Chegada às 2026-09-25T07:28 (KM 987645).",
+      "publico": "solicitante",
+      "solicitanteNome": "Anderson",
+      "pedidoId": "ped-3bfe6e24-9d0e-4e66-8fc6-657e974e7418",
+      "lida": true,
+      "criadoEm": "2026-09-25T10:29:04.814Z"
+    },
+    {
+      "id": "not-25060f9d-1ea6-4367-837b-5d41c9d70158",
+      "tipo": "novo_pedido",
+      "titulo": "Novo pedido de transporte",
+      "mensagem": "Anderson solicitou transporte: Hospital Geral de Fortaleza (HGF) → Hospital Regional Norte.",
+      "publico": "transporte",
+      "solicitanteNome": null,
+      "pedidoId": "ped-625e043d-5f66-4b2d-bd4b-5daf2585e578",
+      "lida": false,
+      "criadoEm": "2026-09-25T10:34:37.911Z"
+    },
+    {
+      "id": "not-aa162cab-dd69-454b-bf57-3c287b9c3c97",
+      "tipo": "novo_pedido",
+      "titulo": "Novo pedido de transporte",
+      "mensagem": "Anderson solicitou transporte: Hospital Geral de Fortaleza (HGF) → Hospital Regional Norte.",
+      "publico": "transporte",
+      "solicitanteNome": null,
+      "pedidoId": "ped-269c640e-158f-424a-b256-0c28886461e6",
+      "lida": false,
+      "criadoEm": "2026-09-25T10:35:34.327Z"
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HemoCar &mdash; PoC Logística de Transporte</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">HC</span>
+      <div>
+        <h1>HemoCar</h1>
+        <p>PoC &mdash; Logística de Transporte</p>
+      </div>
+    </div>
+
+    <div class="topbar-acoes">
+      <div class="role-switch">
+        <label for="perfil">Perfil ativo</label>
+        <select id="perfil">
+          <option value="solicitante">Solicitante</option>
+          <option value="transporte">Equipe de Transporte</option>
+          <option value="portaria">Portaria</option>
+        </select>
+      </div>
+
+      <div class="perfil-wrap" id="perfilWrap" hidden>
+        <button id="btnPerfilSolicitante" class="chip-perfil" type="button">
+          <span aria-hidden="true">👤</span>
+          <span id="perfilResumo">Configurar meus dados</span>
+        </button>
+        <div id="painelPerfil" class="painel-perfil" hidden></div>
+      </div>
+
+      <div class="notifos-wrap" id="notifOSWrap">
+        <button id="btnNotifOS" class="chip-perfil" type="button" hidden>
+          <span aria-hidden="true">🖥️</span>
+          <span id="notifOSResumo">Ativar notificações do sistema</span>
+        </button>
+        <div id="painelNotifOS" class="painel-perfil painel-notif-os" hidden></div>
+      </div>
+
+      <div class="notificacoes-wrap" id="notificacoesWrap">
+        <button id="btnNotificacoes" class="btn-sino" type="button" aria-label="Central de notificações">
+          <span aria-hidden="true">🔔</span>
+          <span id="badgeNotificacoes" class="badge-contador" hidden>0</span>
+        </button>
+        <div id="painelNotificacoes" class="painel-notificacoes" hidden></div>
+      </div>
+    </div>
+  </header>
+
+  <div id="alertaFlutuante" class="alerta-flutuante" hidden role="alert" aria-live="assertive">
+    <span class="alerta-icone" aria-hidden="true">🔔</span>
+    <div class="alerta-conteudo">
+      <strong id="alertaTitulo"></strong>
+      <p id="alertaMensagem"></p>
+    </div>
+    <button id="fecharAlerta" class="alerta-fechar" type="button" aria-label="Fechar alerta">✕</button>
+  </div>
+
+  <nav class="tabs" id="tabs"></nav>
+
+  <main id="conteudo" class="conteudo"></main>
+
+  <footer class="rodape">
+    Dados sincronizados em tempo real com o servidor (data/db.json) &mdash; apenas para fins de demonstração.
+    <button id="resetDados" class="link-btn" type="button">Restaurar dados de exemplo</button>
+  </footer>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
