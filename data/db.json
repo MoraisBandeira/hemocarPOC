@@ -1,124 +1,209 @@
 {
   "motoristas": [
     {
-      "id": "mot-2b364205-3a2f-4642-8da9-e5c6459543ef",
+      "id": "mot-a017c680-aee4-452d-aeab-ebf7d73a4052",
       "nome": "Carlos Andrade",
       "cnh": "D",
-      "criadoEm": "2026-09-25T11:11:43.103Z"
+      "criadoEm": "2026-10-08T11:45:50.510Z"
     },
     {
-      "id": "mot-a42b3b14-c424-4ee7-a8c5-75a9bc63e1be",
+      "id": "mot-af98bc5d-71e0-4b49-9e5c-ece0628244df",
       "nome": "Fernanda Lima",
       "cnh": "D",
-      "criadoEm": "2026-09-25T11:11:43.103Z"
+      "criadoEm": "2026-10-08T11:45:50.510Z"
     },
     {
-      "id": "mot-f589d9c3-718d-4f09-97c9-9a93a0b7dcfa",
+      "id": "mot-022f4506-9899-4c36-8bf3-c2143c97d478",
       "nome": "João Pereira",
       "cnh": "E",
-      "criadoEm": "2026-09-25T11:11:43.103Z"
+      "criadoEm": "2026-10-08T11:45:50.510Z"
     }
   ],
   "veiculos": [
     {
-      "id": "vei-2a8e8b6d-481a-4d8c-94ae-1b412bbd5d2c",
+      "id": "vei-a3f7208a-81ee-4bbc-aa63-d024b0e46470",
       "placa": "HMC-1A23",
       "modelo": "Fiat Doblô (refrigerado)",
       "capacidade": "8 caixas térmicas",
-      "criadoEm": "2026-09-25T11:11:43.103Z"
+      "criadoEm": "2026-10-08T11:45:50.510Z"
     },
     {
-      "id": "vei-3f008d98-a61b-4e28-8e79-c18d35fa77a4",
+      "id": "vei-46d390de-5a49-4123-9707-49d185661fdb",
       "placa": "HMC-4B56",
       "modelo": "Renault Master (van)",
       "capacidade": "20 caixas térmicas",
-      "criadoEm": "2026-09-25T11:11:43.103Z"
+      "criadoEm": "2026-10-08T11:45:50.510Z"
     },
     {
-      "id": "vei-03d3e279-7144-4e48-af4f-c69a1c87edb3",
+      "id": "vei-4a4bb7af-4632-48f2-b87f-c90168d7835d",
       "placa": "HMC-7C89",
       "modelo": "Fiat Strada",
       "capacidade": "3 caixas térmicas",
-      "criadoEm": "2026-09-25T11:11:43.103Z"
+      "criadoEm": "2026-10-08T11:45:50.510Z"
     }
   ],
   "hospitais": [
     {
-      "id": "hos-dc94efd7-8d1e-4296-8014-889c4c6d4d22",
+      "id": "hos-882356a2-20cc-40f7-b221-b77d0bd2f0bb",
       "nome": "Hospital Geral de Fortaleza (HGF)",
       "cidade": "Fortaleza/CE",
       "regional": "Regional 2",
       "endereco": "Rua Ávila Goulart, 900 - Papicu",
       "telefone": "(85) 3101-2500",
-      "criadoEm": "2026-09-25T11:11:43.103Z"
+      "criadoEm": "2026-10-08T11:45:50.510Z"
     },
     {
-      "id": "hos-dbf5a121-a487-4412-9a31-29a5844fb748",
+      "id": "hos-7c70d703-287b-459c-9b31-20c9ad5a287d",
       "nome": "Hospital Universitário Walter Cantídio",
       "cidade": "Fortaleza/CE",
       "regional": "Regional 3",
       "endereco": "Rua Pastor Samuel Munguba, 1290 - Rodolfo Teófilo",
       "telefone": "(85) 3366-8000",
-      "criadoEm": "2026-09-25T11:11:43.103Z"
+      "criadoEm": "2026-10-08T11:45:50.510Z"
     },
     {
-      "id": "hos-fc21899a-27cc-421b-9cd4-a9275d6724bf",
+      "id": "hos-7b7fe0ef-8a8c-4dbf-b3f3-55b245a3872d",
       "nome": "Hospital Infantil Albert Sabin",
       "cidade": "Fortaleza/CE",
       "regional": "Regional 4",
       "endereco": "Rua Tertuliano Sales, 544 - Vila União",
       "telefone": "(85) 3101-2300",
-      "criadoEm": "2026-09-25T11:11:43.103Z"
+      "criadoEm": "2026-10-08T11:45:50.510Z"
     },
     {
-      "id": "hos-fb76e55f-eb91-4a6e-bc03-859d2684c208",
+      "id": "hos-a155c6ae-288d-446b-8c4b-6cefa631e21d",
       "nome": "Hospital Regional do Cariri",
       "cidade": "Juazeiro do Norte/CE",
       "regional": "Regional Cariri",
       "endereco": "Rua São José, 1000",
       "telefone": "(88) 3572-1100",
-      "criadoEm": "2026-09-25T11:11:43.103Z"
+      "criadoEm": "2026-10-08T11:45:50.510Z"
     },
     {
-      "id": "hos-833968c8-943d-4861-9dc7-85c76eded7d6",
+      "id": "hos-6ab2d22d-18fc-4378-a99f-15531de50f25",
       "nome": "Hospital Regional Norte",
       "cidade": "Sobral/CE",
       "regional": "Regional Norte",
       "endereco": "Av. Dom José, 500",
       "telefone": "(88) 3677-2200",
-      "criadoEm": "2026-09-25T11:11:43.103Z"
+      "criadoEm": "2026-10-08T11:45:50.510Z"
     }
   ],
   "pedidos": [
     {
-      "id": "ped-76ac8cf9-2ef5-4f02-b719-2c1e9a1010bc",
-      "solicitante": "Anderson",
-      "setor": "central",
+      "id": "ped-dd6ce16d-846a-4315-8992-7ea88a45dd8f",
+      "solicitante": "Teste",
+      "setor": "",
       "origem": "Hospital Geral de Fortaleza (HGF)",
-      "destino": "Hospital Infantil Albert Sabin",
-      "dataDesejada": "2026-09-25T11:51",
-      "tipo": "coleta",
+      "destino": "Hospital Universitário Walter Cantídio",
+      "dataDesejada": "2026-10-08T23:45:50",
+      "tipo": "coleta_externa",
+      "prioridade": "normal",
+      "observacoes": "",
+      "status": "aguardando_diretoria",
+      "motivoRejeicao": null,
+      "rotaId": null,
+      "requerAprovacaoDiretoria": true,
+      "criadoEm": "2026-10-08T11:45:50.549Z",
+      "atualizadoEm": "2026-10-08T11:45:50.549Z"
+    },
+    {
+      "id": "ped-a164111e-4be9-4741-b601-0a39bcf3df6f",
+      "solicitante": "Teste1",
+      "setor": "",
+      "origem": "Hospital Geral de Fortaleza (HGF)",
+      "destino": "Hospital Universitário Walter Cantídio",
+      "dataDesejada": "2026-10-08T23:46:01",
+      "tipo": "coleta_externa",
+      "prioridade": "normal",
+      "observacoes": "",
+      "status": "aguardando_diretoria",
+      "motivoRejeicao": null,
+      "rotaId": null,
+      "requerAprovacaoDiretoria": true,
+      "criadoEm": "2026-10-08T11:46:01.780Z",
+      "atualizadoEm": "2026-10-08T11:46:01.780Z"
+    },
+    {
+      "id": "ped-e1bb0439-8759-4148-963f-f59d12ebd488",
+      "solicitante": "Teste2",
+      "setor": "",
+      "origem": "Hospital Geral de Fortaleza (HGF)",
+      "destino": "Hospital Universitário Walter Cantídio",
+      "dataDesejada": "2026-10-10T11:46:01",
+      "tipo": "coleta_externa",
       "prioridade": "normal",
       "observacoes": "",
       "status": "pendente",
       "motivoRejeicao": null,
       "rotaId": null,
-      "criadoEm": "2026-09-25T11:51:45.285Z",
-      "atualizadoEm": "2026-09-25T11:51:45.285Z"
+      "requerAprovacaoDiretoria": false,
+      "criadoEm": "2026-10-08T11:46:01.827Z",
+      "atualizadoEm": "2026-10-08T11:46:01.827Z"
+    },
+    {
+      "id": "ped-abd5bdc5-1e25-4bbf-8c30-32930e5b1f70",
+      "solicitante": "Teste3",
+      "setor": "",
+      "origem": "Hospital Geral de Fortaleza (HGF)",
+      "destino": "Hospital Universitário Walter Cantídio",
+      "dataDesejada": "2026-10-08T23:46:01",
+      "tipo": "amostras_pre_transfusionais",
+      "prioridade": "normal",
+      "observacoes": "",
+      "status": "pendente",
+      "motivoRejeicao": null,
+      "rotaId": null,
+      "requerAprovacaoDiretoria": false,
+      "criadoEm": "2026-10-08T11:46:01.869Z",
+      "atualizadoEm": "2026-10-08T11:46:01.869Z"
     }
   ],
   "rotas": [],
   "notificacoes": [
     {
-      "id": "not-00ae04c4-7a75-4b60-963c-e337bf8291df",
+      "id": "not-0144abbc-2612-442d-add5-a823ce5b20e1",
       "tipo": "novo_pedido",
-      "titulo": "Novo pedido de transporte",
-      "mensagem": "Anderson solicitou transporte: Hospital Geral de Fortaleza (HGF) → Hospital Infantil Albert Sabin.",
+      "titulo": "Novo pedido aguardando aprovação de diretoria",
+      "mensagem": "Teste solicitou transporte: Hospital Geral de Fortaleza (HGF) → Hospital Universitário Walter Cantídio. (Requer aprovação de diretoria)",
       "publico": "transporte",
       "solicitanteNome": null,
-      "pedidoId": "ped-76ac8cf9-2ef5-4f02-b719-2c1e9a1010bc",
+      "pedidoId": "ped-dd6ce16d-846a-4315-8992-7ea88a45dd8f",
       "lida": false,
-      "criadoEm": "2026-09-25T11:51:45.285Z"
+      "criadoEm": "2026-10-08T11:45:50.549Z"
+    },
+    {
+      "id": "not-c9b8a17b-65a5-4628-8714-6239d739b4f8",
+      "tipo": "novo_pedido",
+      "titulo": "Novo pedido aguardando aprovação de diretoria",
+      "mensagem": "Teste1 solicitou transporte: Hospital Geral de Fortaleza (HGF) → Hospital Universitário Walter Cantídio. (Requer aprovação de diretoria)",
+      "publico": "transporte",
+      "solicitanteNome": null,
+      "pedidoId": "ped-a164111e-4be9-4741-b601-0a39bcf3df6f",
+      "lida": false,
+      "criadoEm": "2026-10-08T11:46:01.780Z"
+    },
+    {
+      "id": "not-a15aab81-76ff-4a04-9a0b-91f9c553e67e",
+      "tipo": "novo_pedido",
+      "titulo": "Novo pedido de transporte",
+      "mensagem": "Teste2 solicitou transporte: Hospital Geral de Fortaleza (HGF) → Hospital Universitário Walter Cantídio.",
+      "publico": "transporte",
+      "solicitanteNome": null,
+      "pedidoId": "ped-e1bb0439-8759-4148-963f-f59d12ebd488",
+      "lida": false,
+      "criadoEm": "2026-10-08T11:46:01.827Z"
+    },
+    {
+      "id": "not-2bbf3175-4d9c-4c9c-9777-9f0c4a6aff21",
+      "tipo": "novo_pedido",
+      "titulo": "Novo pedido de transporte",
+      "mensagem": "Teste3 solicitou transporte: Hospital Geral de Fortaleza (HGF) → Hospital Universitário Walter Cantídio.",
+      "publico": "transporte",
+      "solicitanteNome": null,
+      "pedidoId": "ped-abd5bdc5-1e25-4bbf-8c30-32930e5b1f70",
+      "lida": false,
+      "criadoEm": "2026-10-08T11:46:01.869Z"
     }
   ]
 }

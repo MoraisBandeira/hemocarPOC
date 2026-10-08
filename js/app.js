@@ -33,6 +33,7 @@ const TABS_POR_PERFIL = {
 
 const ROTULO_STATUS_PEDIDO = {
   pendente: "Pendente",
+  aguardando_diretoria: "Aguardando Aprovação",
   roteirizado: "Roteirizado",
   em_transito: "Em trânsito",
   rejeitado: "Rejeitado",
