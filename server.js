@@ -143,6 +143,8 @@ function carregarEstado() {
   estado.pedidos.forEach((p) => {
     if (p.requerAprovacaoDiretoria === undefined) p.requerAprovacaoDiretoria = false;
   });
+  // marcar pedidos expirados ao iniciar o servidor
+  marcarPedidosExpirados();
   salvarEstado();
 }
 
@@ -296,8 +298,26 @@ function anotarDisponibilidade(lista, campoId) {
   });
 }
 
+/** Marca automaticamente pedidos que passaram 24h do horário de saída como "concluido_sem_saida". */
+function marcarPedidosExpirados() {
+  const agora = new Date();
+  estado.pedidos.forEach((pedido) => {
+    // Só processa pedidos que ainda não foram concluídos ou rejeitados
+    if (["pendente", "aguardando_diretoria", "roteirizado", "em_transito"].includes(pedido.status)) {
+      const dataDesejada = new Date(pedido.dataDesejada);
+      const horasPassadas = (agora.getTime() - dataDesejada.getTime()) / (1000 * 60 * 60);
+
+      // Se passou mais de 24h do horário de saída desejado, marcar como concluído sem saída
+      if (horasPassadas > 24) {
+        atualizarPedido(pedido.id, { status: "concluido_sem_saida" });
+      }
+    }
+  });
+}
+
 /** Estado com motoristas/veículos anotados — o que de fato vai para os clientes. */
 function estadoParaEnvio() {
+  marcarPedidosExpirados(); // Atualiza status de pedidos expirados antes de enviar
   return {
     ...estado,
     motoristas: anotarDisponibilidade(estado.motoristas, "motoristaId"),

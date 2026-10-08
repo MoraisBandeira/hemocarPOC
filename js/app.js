@@ -38,6 +38,7 @@ const ROTULO_STATUS_PEDIDO = {
   em_transito: "Em trânsito",
   rejeitado: "Rejeitado",
   concluido: "Concluído",
+  concluido_sem_saida: "Concluído sem Saída",
 };
 
 const ROTULO_PRIORIDADE = {
