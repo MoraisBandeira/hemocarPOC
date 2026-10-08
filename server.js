@@ -139,6 +139,10 @@ function carregarEstado() {
   // anotarDisponibilidade), então o campo antigo fica obsoleto.
   estado.motoristas.forEach((m) => delete m.status);
   estado.veiculos.forEach((v) => delete v.status);
+  // migração: pedidos antigos não tinham o campo requerAprovacaoDiretoria
+  estado.pedidos.forEach((p) => {
+    if (p.requerAprovacaoDiretoria === undefined) p.requerAprovacaoDiretoria = false;
+  });
   salvarEstado();
 }
 
@@ -191,6 +195,20 @@ function criarPedido(dados) {
   if (!dados.solicitante || !dados.origem || !dados.destino || !dados.dataDesejada) {
     throw new ErroApi(400, "Preencha solicitante, origem, destino e data desejada.");
   }
+
+  const tiposRequeremAprovacaoDiretoria = [
+    "coleta_externa",
+    "materiais",
+    "pessoal_administrativo",
+    "pessoal_tecnico",
+  ];
+
+  const agora = new Date();
+  const dataDesejada = new Date(dados.dataDesejada);
+  const diffMs = dataDesejada.getTime() - agora.getTime();
+  const diffHoras = diffMs / (1000 * 60 * 60);
+  const requerAprovacaoDiretoria = tiposRequeremAprovacaoDiretoria.includes(dados.tipo) && diffHoras < 24;
+
   const pedido = {
     id: novoId("ped"),
     solicitante: dados.solicitante,
@@ -201,9 +219,10 @@ function criarPedido(dados) {
     tipo: dados.tipo || "outro",
     prioridade: dados.prioridade || "normal",
     observacoes: dados.observacoes || "",
-    status: "pendente", // pendente | roteirizado | rejeitado | concluido
+    status: requerAprovacaoDiretoria ? "aguardando_diretoria" : "pendente", // pendente | aguardando_diretoria | roteirizado | rejeitado | concluido
     motivoRejeicao: null,
     rotaId: null,
+    requerAprovacaoDiretoria: requerAprovacaoDiretoria,
     criadoEm: agoraISO(),
     atualizadoEm: agoraISO(),
   };
@@ -211,9 +230,9 @@ function criarPedido(dados) {
 
   adicionarNotificacao({
     tipo: "novo_pedido",
-    titulo: "Novo pedido de transporte",
-    mensagem: `${pedido.solicitante} solicitou transporte: ${pedido.origem} → ${pedido.destino}.`,
-    publico: "transporte",
+    titulo: requerAprovacaoDiretoria ? "Novo pedido aguardando aprovação de diretoria" : "Novo pedido de transporte",
+    mensagem: `${pedido.solicitante} solicitou transporte: ${pedido.origem} → ${pedido.destino}.${requerAprovacaoDiretoria ? " (Requer aprovação de diretoria)" : ""}`,
+    publico: requerAprovacaoDiretoria ? "transporte" : "transporte",
     pedidoId: pedido.id,
   });
 
@@ -553,6 +572,21 @@ async function tratarApi(req, res, url) {
     if (partes.length === 4 && partes[3] === "rejeitar" && metodo === "POST") {
       const dados = await lerCorpoJson(req);
       const pedido = rejeitarPedido(partes[2], dados.motivo);
+      persistirETransmitir();
+      return responderJson(res, 200, pedido);
+    }
+    if (partes.length === 4 && partes[3] === "aprovar-diretoria" && metodo === "POST") {
+      const pedido = estado.pedidos.find((p) => p.id === partes[2]);
+      if (!pedido) throw new ErroApi(404, "Pedido não encontrado.");
+      if (pedido.status !== "aguardando_diretoria") throw new ErroApi(409, "Este pedido não está aguardando aprovação de diretoria.");
+      atualizarPedido(partes[2], { status: "pendente" });
+      adicionarNotificacao({
+        tipo: "novo_pedido",
+        titulo: "Solicitação aprovada pela diretoria",
+        mensagem: `A solicitação de ${pedido.solicitante} (${pedido.origem} → ${pedido.destino}) foi aprovada pela diretoria e segue para análise da equipe de transporte.`,
+        publico: "transporte",
+        pedidoId: pedido.id,
+      });
       persistirETransmitir();
       return responderJson(res, 200, pedido);
     }

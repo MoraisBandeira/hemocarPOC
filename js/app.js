@@ -25,6 +25,10 @@ const TABS_POR_PERFIL = {
     { id: "portariaChegada", label: "Em trânsito" },
     { id: "portariaHistorico", label: "Histórico" },
   ],
+  diretoria: [
+    { id: "aprovacaoDiretoria", label: "Aprovação de Solicitações" },
+    { id: "analiseRetorno", label: "Análise Geral" },
+  ],
 };
 
 const ROTULO_STATUS_PEDIDO = {
@@ -41,6 +45,13 @@ const ROTULO_PRIORIDADE = {
   alta: "Alta",
   urgente: "Urgente",
 };
+
+const TIPOS_REQUEREM_APROVA_DIRETORIA = [
+  "coleta_externa",
+  "materiais",
+  "pessoal_administrativo",
+  "pessoal_tecnico",
+];
 
 const CAMPOS_POR_TIPO = {
   amostras_pre_transfusionais: [
@@ -252,6 +263,8 @@ function renderConteudo() {
     case "portariaSaida": main.innerHTML = viewPortariaSaida(); break;
     case "portariaChegada": main.innerHTML = viewPortariaChegada(); break;
     case "portariaHistorico": main.innerHTML = viewPortariaHistorico(); break;
+    case "aprovacaoDiretoria": main.innerHTML = viewAprovacaoDiretoria(); break;
+    case "analiseRetorno": main.innerHTML = viewAnaliseRetorno(); break;
     default: main.innerHTML = "";
   }
   ligarEventosDaAba();
@@ -1128,6 +1141,108 @@ function viewPortariaHistorico() {
   `;
 }
 
+// ---------- View: Aprovação de Diretoria ----------
+
+function viewAprovacaoDiretoria() {
+  const pedidos = DB.listarPedidos();
+  const aguardandoDiretoria = pedidos.filter((p) => p.status === "aguardando_diretoria");
+
+  const { itens, paginaAtual, totalPaginas, total } = paginar(aguardandoDiretoria, estado.pagina);
+  const cards = itens.length
+    ? itens.map((p) => cardPedidoDiretoria(p)).join("")
+    : `<div class="vazio">Nenhuma solicitação aguardando aprovação da diretoria.</div>`;
+
+  return `
+    <section class="painel">
+      <h2>Aprovação de Solicitações</h2>
+      <p class="sub">Solicitações de <strong>coleta externa, materiais, pessoal administrativo e pessoal técnico</strong> feitas com menos de 24h de antecedência requerem aprovação da diretoria. ${total ? `(${total})` : ""}</p>
+      <div class="lista-cards">${cards}</div>
+      ${renderPaginacao({ paginaAtual, totalPaginas, total })}
+    </section>
+  `;
+}
+
+function cardPedidoDiretoria(pedido) {
+  const agora = new Date();
+  const dataDesejada = new Date(pedido.dataDesejada);
+  const diffMs = dataDesejada.getTime() - agora.getTime();
+  const diffHoras = Math.round(diffMs / (1000 * 60 * 60));
+  const tempoRestante = diffHoras > 0 ? `${diffHoras}h` : "atrasado";
+
+  return `
+    <article class="card">
+      <div class="card-topo">
+        <div>
+          <div class="card-titulo">${escapeHtml(pedido.origem)} → ${escapeHtml(pedido.destino)}</div>
+          <div class="card-meta">Solicitado por ${escapeHtml(pedido.solicitante)} em ${formatarData(pedido.criadoEm)}</div>
+        </div>
+        <div>
+          <span class="badge high">⏰ ${tempoRestante}</span>
+          <span class="badge prioridade-${pedido.prioridade}">${ROTULO_PRIORIDADE[pedido.prioridade] || pedido.prioridade}</span>
+        </div>
+      </div>
+      <dl class="card-corpo">
+        <div><dt>Setor</dt><dd>${escapeHtml(pedido.setor || "sem setor")}</dd></div>
+        <div><dt>Tipo de Solicitação</dt><dd>${escapeHtml(pedido.tipo)}</dd></div>
+        <div><dt>Data Desejada</dt><dd>${formatarData(pedido.dataDesejada)}</dd></div>
+      </dl>
+      ${pedido.observacoes ? `<p class="card-obs">${escapeHtml(pedido.observacoes)}</p>` : ""}
+      <div class="form-acoes" style="gap:8px;">
+        <button type="button" class="btn" data-aprovar-diretoria="${pedido.id}">✓ Aprovar</button>
+        <button type="button" class="btn secundario" data-rejeitar-diretoria="${pedido.id}">✕ Rejeitar</button>
+      </div>
+    </article>
+  `;
+}
+
+function viewAnaliseRetorno() {
+  const pedidos = DB.listarPedidos();
+  const rotas = DB.listarRotas();
+  const motoristas = DB.listarMotoristas();
+  const veiculos = DB.listarVeiculos();
+
+  const contadores = {
+    aguardandoDiretoria: pedidos.filter((p) => p.status === "aguardando_diretoria").length,
+    pendente: pedidos.filter((p) => p.status === "pendente").length,
+    roteirizado: pedidos.filter((p) => p.status === "roteirizado").length,
+    concluido: pedidos.filter((p) => p.status === "concluido").length,
+    rejeitado: pedidos.filter((p) => p.status === "rejeitado").length,
+  };
+
+  const statusCards = `
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:24px;">
+      <div class="card" style="padding:16px;">
+        <div style="font-size:24px; font-weight:bold; color:#d32f2f;">${contadores.aguardandoDiretoria}</div>
+        <div style="font-size:14px; color:#666;">Aguardando Diretoria</div>
+      </div>
+      <div class="card" style="padding:16px;">
+        <div style="font-size:24px; font-weight:bold; color:#f57c00;">${contadores.pendente}</div>
+        <div style="font-size:14px; color:#666;">Pendentes de Análise</div>
+      </div>
+      <div class="card" style="padding:16px;">
+        <div style="font-size:24px; font-weight:bold; color:#1976d2;">${contadores.roteirizado}</div>
+        <div style="font-size:14px; color:#666;">Roteirizados</div>
+      </div>
+      <div class="card" style="padding:16px;">
+        <div style="font-size:24px; font-weight:bold; color:#388e3c;">${contadores.concluido}</div>
+        <div style="font-size:14px; color:#666;">Concluídos</div>
+      </div>
+      <div class="card" style="padding:16px;">
+        <div style="font-size:24px; font-weight:bold; color:#7b1fa2;">${contadores.rejeitado}</div>
+        <div style="font-size:14px; color:#666;">Rejeitados</div>
+      </div>
+    </div>
+  `;
+
+  return `
+    <section class="painel">
+      <h2>Análise Geral</h2>
+      <p class="sub">Visão geral do status de todas as solicitações.</p>
+      ${statusCards}
+    </section>
+  `;
+}
+
 // ---------- View: Cadastros (Transporte) ----------
 
 function viewCadastros() {
@@ -1522,6 +1637,37 @@ function ligarEventosDaAba() {
     btn.addEventListener("click", async () => {
       await DB.removerHospital(btn.dataset.removerHospital);
       renderConteudo();
+    });
+  });
+
+  main.querySelectorAll("[data-aprovar-diretoria]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const pedidoId = btn.dataset.aprovarDiretoria;
+      try {
+        await DB.aprovarPorDiretoria(pedidoId);
+        toast("Solicitação aprovada pela diretoria.");
+        renderConteudo();
+      } catch (e) {
+        toast(e.message);
+      }
+    });
+  });
+
+  main.querySelectorAll("[data-rejeitar-diretoria]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const pedidoId = btn.dataset.rejeitarDiretoria;
+      const motivo = prompt("Motivo da rejeição:");
+      if (!motivo?.trim()) {
+        toast("Rejeição cancelada.");
+        return;
+      }
+      try {
+        await DB.rejeitarPedido(pedidoId, motivo.trim());
+        toast("Solicitação rejeitada.");
+        renderConteudo();
+      } catch (e) {
+        toast(e.message);
+      }
     });
   });
 }
