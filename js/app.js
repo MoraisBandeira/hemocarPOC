@@ -747,7 +747,8 @@ function painelSugestoesAgrupamento(gruposDestino, gruposRegiao) {
 
 function viewAnalise() {
   const pedidos = DB.listarPedidos();
-  const pendentes = pedidos.filter((p) => p.status === "pendente");
+  // Mostra pedidos pendentes que já foram aceitos (têm tipoTransporte)
+  const pendentes = pedidos.filter((p) => p.status === "pendente" && p.tipoTransporte);
 
   // remove da seleção pedidos que não estão mais pendentes (ex.: outra pessoa já analisou)
   const idsPendentes = new Set(pendentes.map((p) => p.id));
@@ -925,6 +926,7 @@ function cardPedidoAnalise(pedido, infoGrupo) {
         <div>
           <span class="badge ${pedido.status}">${ROTULO_STATUS_PEDIDO[pedido.status]}</span>
           <span class="badge prioridade-${pedido.prioridade}">${ROTULO_PRIORIDADE[pedido.prioridade] || pedido.prioridade}</span>
+          ${pedido.tipoTransporte ? `<span class="badge" style="background-color: #7c3aed;">${pedido.tipoTransporte === "hemoce" ? "🏥 Hemoce" : "🚗 Terceiros"}</span>` : ""}
           ${selosGrupo}
         </div>
       </div>
