@@ -357,7 +357,7 @@ function aprovarPedidos(pedidoIds, { motoristaId, veiculoId, horarioSaida, previ
   const pedidos = idsUnicos.map((id) => {
     const pedido = estado.pedidos.find((p) => p.id === id);
     if (!pedido) throw new ErroApi(404, "Um dos pedidos selecionados não foi encontrado.");
-    if (pedido.status !== "pendente") throw new ErroApi(409, `O pedido de ${pedido.solicitante} não está mais pendente (outra pessoa pode ter analisado antes).`);
+    if (!["pendente", "aceito"].includes(pedido.status)) throw new ErroApi(409, `O pedido de ${pedido.solicitante} não está disponível para análise (outra pessoa pode ter analisado antes).`);
     return pedido;
   });
 
@@ -655,7 +655,7 @@ async function tratarApi(req, res, url) {
       if (!dados.tipoTransporte || !["hemoce", "outros"].includes(dados.tipoTransporte)) {
         throw new ErroApi(400, "Tipo de transporte inválido. Use 'hemoce' ou 'outros'.");
       }
-      atualizarPedido(partes[2], { tipoTransporte: dados.tipoTransporte });
+      atualizarPedido(partes[2], { status: "aceito", tipoTransporte: dados.tipoTransporte });
       persistirETransmitir();
       return responderJson(res, 200, pedido);
     }

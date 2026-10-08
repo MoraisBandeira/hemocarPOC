@@ -35,6 +35,7 @@ const TABS_POR_PERFIL = {
 const ROTULO_STATUS_PEDIDO = {
   pendente: "Pendente",
   aguardando_diretoria: "Aguardando Aprovação",
+  aceito: "Aceito - Aguardando Análise",
   roteirizado: "Roteirizado",
   em_transito: "Em trânsito",
   rejeitado: "Rejeitado",
@@ -541,8 +542,8 @@ function cardPedidoSolicitante(pedido, rotas, motoristas, veiculos) {
 
 function viewAceitarSolicitacoes() {
   const pedidos = DB.listarPedidos();
-  // Filtra pedidos pendentes que ainda não foram aceitos (não têm tipoTransporte)
-  const pendentes = pedidos.filter((p) => p.status === "pendente" && !p.tipoTransporte);
+  // Filtra pedidos que ainda não foram aceitos
+  const pendentes = pedidos.filter((p) => p.status === "pendente");
 
   const { itens, paginaAtual, totalPaginas, total } = paginar(pendentes, estado.pagina);
   const cards = itens.length
@@ -747,8 +748,8 @@ function painelSugestoesAgrupamento(gruposDestino, gruposRegiao) {
 
 function viewAnalise() {
   const pedidos = DB.listarPedidos();
-  // Mostra pedidos pendentes que já foram aceitos (têm tipoTransporte)
-  const pendentes = pedidos.filter((p) => p.status === "pendente" && p.tipoTransporte);
+  // Mostra apenas pedidos que foram aceitos e aguardam análise
+  const pendentes = pedidos.filter((p) => p.status === "aceito");
 
   // remove da seleção pedidos que não estão mais pendentes (ex.: outra pessoa já analisou)
   const idsPendentes = new Set(pendentes.map((p) => p.id));

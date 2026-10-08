@@ -106,6 +106,23 @@
       "requerAprovacaoDiretoria": false,
       "criadoEm": "2026-10-08T17:13:25.099Z",
       "atualizadoEm": "2026-10-08T17:13:25.099Z"
+    },
+    {
+      "id": "ped-d57c612c-82fd-47de-b6c6-10d22de624ba",
+      "solicitante": "Anderson.morais",
+      "setor": "central",
+      "origem": "Hospital Geral de Fortaleza (HGF)",
+      "destino": "Hospital Infantil Albert Sabin",
+      "dataDesejada": "2026-10-08T16:57",
+      "tipo": "amostras_pre_transfusionais",
+      "prioridade": "normal",
+      "observacoes": "sdsadasdasd",
+      "status": "pendente",
+      "motivoRejeicao": null,
+      "rotaId": null,
+      "requerAprovacaoDiretoria": false,
+      "criadoEm": "2026-10-08T17:56:45.917Z",
+      "atualizadoEm": "2026-10-08T17:56:45.917Z"
     }
   ],
   "rotas": [],
@@ -120,6 +137,17 @@
       "pedidoId": "ped-572210e0-4497-479f-99c6-0e9b747ac973",
       "lida": false,
       "criadoEm": "2026-10-08T17:13:25.099Z"
+    },
+    {
+      "id": "not-f03e0281-be2a-4365-be47-0b18f95e5d90",
+      "tipo": "novo_pedido",
+      "titulo": "Novo pedido de transporte",
+      "mensagem": "Anderson.morais solicitou transporte: Hospital Geral de Fortaleza (HGF) → Hospital Infantil Albert Sabin.",
+      "publico": "transporte",
+      "solicitanteNome": null,
+      "pedidoId": "ped-d57c612c-82fd-47de-b6c6-10d22de624ba",
+      "lida": false,
+      "criadoEm": "2026-10-08T17:56:45.917Z"
     }
   ]
 }
