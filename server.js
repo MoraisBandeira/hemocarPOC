@@ -360,16 +360,42 @@ function aprovarPedidos(pedidoIds, { motoristaId, veiculoId, horarioSaida, previ
   };
   estado.rotas.push(rota);
 
+  // Verificar se há pedidos de pessoal agrupados com horários diferentes
+  const pedidosPessoal = pedidos.filter((p) => p.tipo === "pessoal_administrativo" || p.tipo === "pessoal_tecnico");
+  const temPessoalAgrupado = pedidosPessoal.length > 1;
+
+  let horarioMasCedo = null;
+  if (temPessoalAgrupado) {
+    const datasDesejadas = pedidosPessoal.map((p) => new Date(p.dataDesejada).getTime()).sort((a, b) => a - b);
+    horarioMasCedo = new Date(datasDesejadas[0]).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+
   pedidos.forEach((pedido) => {
     atualizarPedido(pedido.id, { status: "roteirizado", rotaId: rota.id });
-    adicionarNotificacao({
-      tipo: "pedido_aprovado",
-      titulo: "Pedido aprovado",
-      mensagem: `Seu pedido (${pedido.origem} → ${pedido.destino}) foi aprovado${pedidos.length > 1 ? ", numa rota que também leva outro(s) pedido(s)" : ""}. Motorista ${motorista.nome}, veículo ${veiculo.placa}.`,
-      publico: "solicitante",
-      solicitanteNome: pedido.solicitante,
-      pedidoId: pedido.id,
-    });
+
+    // Se é um pedido de pessoal agrupado e NÃO é o mais cedo, notificar sobre mudança de horário
+    const ePessoal = pedido.tipo === "pessoal_administrativo" || pedido.tipo === "pessoal_tecnico";
+    const naoEMasCedo = temPessoalAgrupado && ePessoal && new Date(pedido.dataDesejada).getTime() > new Date(pedidosPessoal[0].dataDesejada).getTime();
+
+    if (naoEMasCedo) {
+      adicionarNotificacao({
+        tipo: "pedido_aprovado",
+        titulo: "Pedido aprovado - alteração de horário",
+        mensagem: `Seu pedido foi agrupado com outro(s) transporte(s). O veículo sairá no horário mais cedo da rota: ${horarioMasCedo}. Motorista ${motorista.nome}, veículo ${veiculo.placa}. Você deseja ir neste horário?`,
+        publico: "solicitante",
+        solicitanteNome: pedido.solicitante,
+        pedidoId: pedido.id,
+      });
+    } else {
+      adicionarNotificacao({
+        tipo: "pedido_aprovado",
+        titulo: "Pedido aprovado",
+        mensagem: `Seu pedido (${pedido.origem} → ${pedido.destino}) foi aprovado${pedidos.length > 1 ? ", numa rota que também leva outro(s) pedido(s)" : ""}. Motorista ${motorista.nome}, veículo ${veiculo.placa}.`,
+        publico: "solicitante",
+        solicitanteNome: pedido.solicitante,
+        pedidoId: pedido.id,
+      });
+    }
   });
 
   return { pedidos, rota };

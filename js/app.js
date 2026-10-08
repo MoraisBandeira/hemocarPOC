@@ -765,9 +765,23 @@ function barraSelecaoLote(pendentes, motoristas, veiculos) {
     const datasDesejadas = selecionados.map((p) => p.dataDesejada).filter(Boolean).sort();
     const sugestaoSaida = datasDesejadas[0] || paraDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000));
     const sugestaoTermino = paraDatetimeLocal(new Date(new Date(sugestaoSaida).getTime() + 2 * 60 * 60 * 1000));
+
+    // Verificar se há pedidos de pessoal agrupados com horários diferentes
+    const pedidosPessoal = selecionados.filter((p) => p.tipo === "pessoal_administrativo" || p.tipo === "pessoal_tecnico");
+    const temPessoalComHorariosDiferentes = pedidosPessoal.length > 1 &&
+      new Set(pedidosPessoal.map((p) => new Date(p.dataDesejada).getTime())).size > 1;
+
+    const avisoAgrupamentoPessoal = temPessoalComHorariosDiferentes ? `
+      <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 12px; margin-bottom: 12px;">
+        <strong>⚠️ Agrupamento de pessoal:</strong> Há solicitações de pessoal com horários diferentes. O veículo sairá no horário mais cedo (${formatarData(datasDesejadas[0])}).
+        Solicitantes com horários posteriores serão notificados para confirmar se desejam ir neste horário.
+      </div>
+    ` : "";
+
     formulario = `
       <div class="analise-form">
         <h4>Aprovar ${n} pedido${n === 1 ? "" : "s"} numa rota</h4>
+        ${avisoAgrupamentoPessoal}
         ${semCadastro ? `<p class="card-obs">Cadastre ao menos um motorista e um veículo na aba "Cadastros" antes de aprovar.</p>` : `
           <p class="card-obs">Motoristas e veículos já em outra rota também aparecem na lista — pode escalar, desde que o horário não se sobreponha.</p>
         `}
