@@ -564,7 +564,12 @@ function regiaoDoPedido(pedido, hospitais) {
 // pedidos pra mesma rota não devem ter horário desejado muito distante entre
 // si — não faz sentido sugerir juntar quem quer sair de manhã com quem quer
 // sair à noite, mesmo indo pro mesmo lugar.
-const JANELA_AGRUPAMENTO_MS = 3 * 60 * 60 * 1000; // 3 horas
+const JANELAS_AGRUPAMENTO_MS = {
+  equipamentos: 6 * 60 * 60 * 1000, // 6 horas
+  pessoal_administrativo: 1 * 60 * 60 * 1000, // 1 hora
+  pessoal_tecnico: 1 * 60 * 60 * 1000, // 1 hora
+  default: 1 * 60 * 60 * 1000, // 1 hora padrão
+};
 
 /**
  * Quebra uma lista de pedidos (já filtrada por mesmo destino ou mesma
@@ -583,9 +588,16 @@ function agruparPorHorarioProximo(pedidos) {
   let atual = [];
   comHorario.forEach((p) => {
     const anterior = atual[atual.length - 1];
-    if (anterior && new Date(p.dataDesejada) - new Date(anterior.dataDesejada) > JANELA_AGRUPAMENTO_MS) {
-      grupos.push(atual);
-      atual = [];
+    if (anterior) {
+      // Usar janela específica do tipo ou padrão
+      const janelaAnterior = JANELAS_AGRUPAMENTO_MS[anterior.tipo] || JANELAS_AGRUPAMENTO_MS.default;
+      const janelaAtual = JANELAS_AGRUPAMENTO_MS[p.tipo] || JANELAS_AGRUPAMENTO_MS.default;
+      const janela = Math.min(janelaAnterior, janelaAtual); // usar a mais restritiva
+
+      if (new Date(p.dataDesejada) - new Date(anterior.dataDesejada) > janela) {
+        grupos.push(atual);
+        atual = [];
+      }
     }
     atual.push(p);
   });
