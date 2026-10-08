@@ -272,12 +272,18 @@ function viewNovoPedido() {
             <input id="dataDesejada" type="datetime-local" name="dataDesejada" required value="${sugestaoData}" />
           </div>
           <div class="campo">
-            <label for="tipo">Tipo de transporte</label>
+            <label for="tipo">Tipo de solicitação</label>
             <select id="tipo" name="tipo">
-              <option value="coleta">Coleta</option>
-              <option value="entrega">Entrega</option>
-              <option value="transferencia">Transferência entre unidades</option>
-              <option value="outro">Outro</option>
+              <option value="amostras_pre_transfusionais">Amostras Pré-Transfusionais</option>
+              <option value="amostras_outras">Amostras - Outras</option>
+              <option value="coleta_externa">Coleta Externa</option>
+              <option value="doadores">Doadores</option>
+              <option value="equipamentos">Equipamentos</option>
+              <option value="hemocomponentes">Hemocomponentes</option>
+              <option value="materiais">Materiais</option>
+              <option value="medicamentos">Medicamentos</option>
+              <option value="pessoal_administrativo">Pessoal Administrativo</option>
+              <option value="pessoal_tecnico">Pessoal Técnico</option>
             </select>
           </div>
           <div class="campo">
