@@ -15,6 +15,11 @@ const TABS_POR_PERFIL = {
     { id: "rotas", label: "Rotas Programadas" },
     { id: "cadastros", label: "Cadastros" },
   ],
+  distribuicao: [
+    { id: "analise", label: "Análise de Pedidos" },
+    { id: "rotas", label: "Rotas Programadas" },
+    { id: "cadastros", label: "Cadastros" },
+  ],
   portaria: [
     { id: "portariaSaida", label: "Aguardando saída" },
     { id: "portariaChegada", label: "Em trânsito" },
@@ -1464,7 +1469,7 @@ function renderChipPerfil() {
  * solicitante), e vice-versa.
  */
 function notificacoesDoPerfilAtual(lista) {
-  if (estado.perfil === "transporte") {
+  if (estado.perfil === "transporte" || estado.perfil === "distribuicao") {
     return lista.filter((n) => n.publico === "transporte");
   }
   if (estado.perfil === "solicitante") {
@@ -1476,7 +1481,7 @@ function notificacoesDoPerfilAtual(lista) {
 }
 
 function escopoNotificacoesAtual() {
-  if (estado.perfil === "transporte") return { publico: "transporte" };
+  if (estado.perfil === "transporte" || estado.perfil === "distribuicao") return { publico: "transporte" };
   if (estado.perfil === "solicitante") return { publico: "solicitante", nome: obterPerfilSolicitante().nome || "" };
   return { publico: "nenhum" };
 }
@@ -1502,7 +1507,7 @@ function sincronizarNotificacoes() {
   if (novas.length) {
     const novasVisiveis = notificacoesDoPerfilAtual(novas);
 
-    if (estado.perfil === "transporte") {
+    if (estado.perfil === "transporte" || estado.perfil === "distribuicao") {
       const novosPedidos = novasVisiveis.filter((n) => n.tipo === "novo_pedido");
       if (novosPedidos.length) {
         dispararAlertaNovoPedido(novosPedidos[novosPedidos.length - 1], novosPedidos.length);
