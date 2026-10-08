@@ -82,6 +82,9 @@ const DB = (() => {
   function aprovarPorDiretoria(pedidoId) {
     return requisitar(`/api/pedidos/${pedidoId}/aprovar-diretoria`, { method: "POST", body: JSON.stringify({}) });
   }
+  function aceitarSolicitacao(pedidoId, tipoTransporte) {
+    return requisitar(`/api/pedidos/${pedidoId}/aceitar`, { method: "POST", body: JSON.stringify({ tipoTransporte }) });
+  }
   function registrarSaidaRota(rotaId, dados) {
     return requisitar(`/api/rotas/${rotaId}/saida`, { method: "POST", body: JSON.stringify(dados) });
   }
@@ -141,6 +144,7 @@ const DB = (() => {
     aprovarPedidos,
     rejeitarPedido,
     aprovarPorDiretoria,
+    aceitarSolicitacao,
     registrarSaidaRota,
     registrarChegadaRota,
     editarRota,

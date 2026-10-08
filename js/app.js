@@ -11,6 +11,7 @@ const TABS_POR_PERFIL = {
     { id: "meusPedidos", label: "Meus Pedidos" },
   ],
   transporte: [
+    { id: "aceitar", label: "Aceitar Solicitações" },
     { id: "analise", label: "Análise de Pedidos" },
     { id: "rotas", label: "Rotas Programadas" },
     { id: "cadastros", label: "Cadastros" },
@@ -259,6 +260,7 @@ function renderConteudo() {
   switch (estado.aba) {
     case "novoPedido": main.innerHTML = viewNovoPedido(); break;
     case "meusPedidos": main.innerHTML = viewMeusPedidos(); break;
+    case "aceitar": main.innerHTML = viewAceitarSolicitacoes(); break;
     case "analise": main.innerHTML = viewAnalise(); break;
     case "rotas": main.innerHTML = viewRotas(); break;
     case "cadastros": main.innerHTML = viewCadastros(); break;
@@ -531,6 +533,54 @@ function cardPedidoSolicitante(pedido, rotas, motoristas, veiculos) {
       </dl>
       ${pedido.observacoes ? `<p class="card-obs">${escapeHtml(pedido.observacoes)}</p>` : ""}
       ${extra}
+    </article>
+  `;
+}
+
+// ---------- View: Aceitar Solicitações (Transporte) ----------
+
+function viewAceitarSolicitacoes() {
+  const pedidos = DB.listarPedidos();
+  // Filtra pedidos pendentes que ainda não foram aceitos (não têm tipoTransporte)
+  const pendentes = pedidos.filter((p) => p.status === "pendente" && !p.tipoTransporte);
+
+  const { itens, paginaAtual, totalPaginas, total } = paginar(pendentes, estado.pagina);
+  const cards = itens.length
+    ? itens.map((p) => cardAceitarSolicitacao(p)).join("")
+    : `<div class="vazio">Nenhuma solicitação aguardando aceitação.</div>`;
+
+  return `
+    <section class="painel">
+      <h2>Aceitar Solicitações</h2>
+      <p class="sub">Escolha o tipo de transporte para cada solicitação antes de criar o roteiro. ${total ? `(${total})` : ""}</p>
+      <div class="lista-cards">${cards}</div>
+      ${renderPaginacao({ paginaAtual, totalPaginas, total })}
+    </section>
+  `;
+}
+
+function cardAceitarSolicitacao(pedido) {
+  return `
+    <article class="card">
+      <div class="card-topo">
+        <div>
+          <div class="card-titulo">${escapeHtml(pedido.origem)} → ${escapeHtml(pedido.destino)}</div>
+          <div class="card-meta">Solicitado por ${escapeHtml(pedido.solicitante)} em ${formatarData(pedido.criadoEm)}</div>
+        </div>
+        <div>
+          <span class="badge prioridade-${pedido.prioridade}">${ROTULO_PRIORIDADE[pedido.prioridade] || pedido.prioridade}</span>
+        </div>
+      </div>
+      <dl class="card-corpo">
+        <div><dt>Setor</dt><dd>${escapeHtml(pedido.setor || "sem setor")}</dd></div>
+        <div><dt>Tipo de Solicitação</dt><dd>${escapeHtml(pedido.tipo)}</dd></div>
+        <div><dt>Data Desejada</dt><dd>${formatarData(pedido.dataDesejada)}</dd></div>
+      </dl>
+      ${pedido.observacoes ? `<p class="card-obs">${escapeHtml(pedido.observacoes)}</p>` : ""}
+      <div class="form-acoes" style="gap:8px;">
+        <button type="button" class="btn" data-aceitar-hemoce="${pedido.id}">🏥 Transporte Hemoce</button>
+        <button type="button" class="btn secundario" data-aceitar-outros="${pedido.id}">🚗 Transporte Outros</button>
+      </div>
     </article>
   `;
 }
@@ -1692,6 +1742,32 @@ function ligarEventosDaAba() {
       try {
         await DB.rejeitarPedido(pedidoId, motivo.trim());
         toast("Solicitação rejeitada.");
+        renderConteudo();
+      } catch (e) {
+        toast(e.message);
+      }
+    });
+  });
+
+  main.querySelectorAll("[data-aceitar-hemoce]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const pedidoId = btn.dataset.aceitarHemoce;
+      try {
+        await DB.aceitarSolicitacao(pedidoId, "hemoce");
+        toast("Solicitação aceita como Transporte Hemoce.");
+        renderConteudo();
+      } catch (e) {
+        toast(e.message);
+      }
+    });
+  });
+
+  main.querySelectorAll("[data-aceitar-outros]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const pedidoId = btn.dataset.aceitarOutros;
+      try {
+        await DB.aceitarSolicitacao(pedidoId, "outros");
+        toast("Solicitação aceita como Transporte Outros.");
         renderConteudo();
       } catch (e) {
         toast(e.message);

@@ -647,6 +647,18 @@ async function tratarApi(req, res, url) {
       persistirETransmitir();
       return responderJson(res, 200, pedido);
     }
+    if (partes.length === 4 && partes[3] === "aceitar" && metodo === "POST") {
+      const dados = await lerCorpoJson(req);
+      const pedido = estado.pedidos.find((p) => p.id === partes[2]);
+      if (!pedido) throw new ErroApi(404, "Pedido não encontrado.");
+      if (pedido.status !== "pendente") throw new ErroApi(409, "Este pedido não está pendente.");
+      if (!dados.tipoTransporte || !["hemoce", "outros"].includes(dados.tipoTransporte)) {
+        throw new ErroApi(400, "Tipo de transporte inválido. Use 'hemoce' ou 'outros'.");
+      }
+      atualizarPedido(partes[2], { tipoTransporte: dados.tipoTransporte });
+      persistirETransmitir();
+      return responderJson(res, 200, pedido);
+    }
   }
 
   if (partes[1] === "rotas") {
