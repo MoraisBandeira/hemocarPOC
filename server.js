@@ -301,18 +301,29 @@ function anotarDisponibilidade(lista, campoId) {
 /** Marca automaticamente pedidos que passaram 24h do horário de saída como "concluido_sem_saida". */
 function marcarPedidosExpirados() {
   const agora = new Date();
+  let houveMudanca = false;
+
   estado.pedidos.forEach((pedido) => {
     // Só processa pedidos que ainda não foram concluídos ou rejeitados
     if (["pendente", "aguardando_diretoria", "roteirizado", "em_transito"].includes(pedido.status)) {
       const dataDesejada = new Date(pedido.dataDesejada);
       const horasPassadas = (agora.getTime() - dataDesejada.getTime()) / (1000 * 60 * 60);
 
+      console.log(`[Debug] Pedido ${pedido.id}: ${horasPassadas.toFixed(2)}h (${pedido.status})`);
+
       // Se passou mais de 24h do horário de saída desejado, marcar como concluído sem saída
       if (horasPassadas > 24) {
+        console.log(`[Auto-complete] Marcando ${pedido.id} como concluido_sem_saida`);
         atualizarPedido(pedido.id, { status: "concluido_sem_saida" });
+        houveMudanca = true;
       }
     }
   });
+
+  // Salvar apenas se houve mudança para não gravar desnecessariamente
+  if (houveMudanca) {
+    salvarEstado();
+  }
 }
 
 /** Estado com motoristas/veículos anotados — o que de fato vai para os clientes. */
