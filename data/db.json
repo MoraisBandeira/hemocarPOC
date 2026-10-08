@@ -89,7 +89,36 @@
       "criadoEm": "2026-09-25T11:11:43.103Z"
     }
   ],
-  "pedidos": [],
+  "pedidos": [
+    {
+      "id": "ped-76ac8cf9-2ef5-4f02-b719-2c1e9a1010bc",
+      "solicitante": "Anderson",
+      "setor": "central",
+      "origem": "Hospital Geral de Fortaleza (HGF)",
+      "destino": "Hospital Infantil Albert Sabin",
+      "dataDesejada": "2026-09-25T11:51",
+      "tipo": "coleta",
+      "prioridade": "normal",
+      "observacoes": "",
+      "status": "pendente",
+      "motivoRejeicao": null,
+      "rotaId": null,
+      "criadoEm": "2026-09-25T11:51:45.285Z",
+      "atualizadoEm": "2026-09-25T11:51:45.285Z"
+    }
+  ],
   "rotas": [],
-  "notificacoes": []
+  "notificacoes": [
+    {
+      "id": "not-00ae04c4-7a75-4b60-963c-e337bf8291df",
+      "tipo": "novo_pedido",
+      "titulo": "Novo pedido de transporte",
+      "mensagem": "Anderson solicitou transporte: Hospital Geral de Fortaleza (HGF) → Hospital Infantil Albert Sabin.",
+      "publico": "transporte",
+      "solicitanteNome": null,
+      "pedidoId": "ped-76ac8cf9-2ef5-4f02-b719-2c1e9a1010bc",
+      "lida": false,
+      "criadoEm": "2026-09-25T11:51:45.285Z"
+    }
+  ]
 }

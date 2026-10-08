@@ -42,6 +42,67 @@ const ROTULO_PRIORIDADE = {
   urgente: "Urgente",
 };
 
+const CAMPOS_POR_TIPO = {
+  amostras_pre_transfusionais: [
+    { id: "tipo_amostra", label: "Tipo de Amostra", type: "text", required: true },
+    { id: "volume_amostra", label: "Volume (ml)", type: "number", required: true },
+    { id: "temperatura_amostra", label: "Temperatura Requerida (°C)", type: "number", required: true },
+    { id: "urgencia_resultado", label: "Urgência do Resultado", type: "select", options: ["Rotina", "Preferencial", "Urgência"], required: true },
+  ],
+  amostras_outras: [
+    { id: "tipo_amostra_outra", label: "Tipo de Amostra", type: "text", required: true },
+    { id: "volume_amostra_outra", label: "Volume (ml)", type: "number", required: false },
+    { id: "temperatura_amostra_outra", label: "Temperatura Requerida", type: "text", required: false },
+  ],
+  coleta_externa: [
+    { id: "local_coleta", label: "Local de Coleta", type: "text", required: true },
+    { id: "responsavel_coleta", label: "Responsável pela Coleta", type: "text", required: true },
+    { id: "telefone_coleta", label: "Telefone de Contato", type: "tel", required: true },
+  ],
+  doadores: [
+    { id: "quantidade_doadores", label: "Quantidade de Doadores", type: "number", required: true },
+    { id: "tipo_doacao", label: "Tipo de Doação", type: "select", options: ["Sangue Total", "Plaquetas", "Plasma"], required: true },
+    { id: "nome_responsavel", label: "Responsável no Local", type: "text", required: true },
+  ],
+  equipamentos: [
+    { id: "descricao_equipamento", label: "Descrição/Modelo do Equipamento", type: "text", required: true },
+    { id: "numero_serie", label: "Número de Série", type: "text", required: false },
+    { id: "peso_equipamento", label: "Peso Aproximado (kg)", type: "number", required: false },
+    { id: "dimensoes", label: "Dimensões (comprimento x largura x altura)", type: "text", required: false },
+  ],
+  hemocomponentes: [
+    { id: "tipo_hemocomponente", label: "Tipo de Hemocomponente", type: "select", options: ["Sangue Total", "Concentrado de Hemácias", "Plaquetas", "Plasma", "Crioprecipitado", "Globulina"], required: true },
+    { id: "quantidade_bolsas", label: "Quantidade de Bolsas", type: "number", required: true },
+    { id: "numero_lote", label: "Número do Lote", type: "text", required: true },
+    { id: "data_validade", label: "Data de Validade", type: "date", required: true },
+  ],
+  materiais: [
+    { id: "descricao_material", label: "Descrição do Material", type: "text", required: true },
+    { id: "quantidade_material", label: "Quantidade", type: "number", required: true },
+    { id: "unidade_material", label: "Unidade", type: "select", options: ["Caixa", "Pacote", "Unidade", "Carretilha", "Pallet"], required: true },
+    { id: "peso_material", label: "Peso Total (kg)", type: "number", required: false },
+  ],
+  medicamentos: [
+    { id: "nome_medicamento", label: "Nome do Medicamento", type: "text", required: true },
+    { id: "quantidade_medicamento", label: "Quantidade", type: "number", required: true },
+    { id: "numero_lote_med", label: "Número do Lote", type: "text", required: true },
+    { id: "data_validade_med", label: "Data de Validade", type: "date", required: true },
+    { id: "temperatura_medicamento", label: "Temperatura Requerida", type: "text", required: false },
+  ],
+  pessoal_administrativo: [
+    { id: "nome_pessoa", label: "Nome da Pessoa", type: "text", required: true },
+    { id: "departamento", label: "Departamento/Setor", type: "text", required: true },
+    { id: "telefone_pessoa", label: "Telefone de Contato", type: "tel", required: true },
+    { id: "motivo_deslocamento", label: "Motivo do Deslocamento", type: "text", required: true },
+  ],
+  pessoal_tecnico: [
+    { id: "nome_tecnico", label: "Nome do Técnico", type: "text", required: true },
+    { id: "especialidade", label: "Especialidade/Função", type: "text", required: true },
+    { id: "telefone_tecnico", label: "Telefone de Contato", type: "tel", required: true },
+    { id: "motivo_deslocamento_tec", label: "Motivo do Deslocamento", type: "text", required: true },
+  ],
+};
+
 const estado = {
   perfil: localStorage.getItem("hemocar_perfil") || "solicitante",
   aba: null,
@@ -223,6 +284,40 @@ function viewSolicitarPerfil(mensagem) {
   `;
 }
 
+function renderCamposDinamicos(tipoSelecionado) {
+  const campos = CAMPOS_POR_TIPO[tipoSelecionado] || [];
+  if (campos.length === 0) return "";
+
+  return `
+    <div class="secao-dinamica">
+      <h3>Informações Específicas</h3>
+      ${campos.map(campo => {
+        const required = campo.required ? "required" : "";
+        const requiredLabel = campo.required ? " <span class='obrigatorio'>*</span>" : "";
+
+        if (campo.type === "select") {
+          return `
+            <div class="campo">
+              <label for="${campo.id}">${escapeHtml(campo.label)}${requiredLabel}</label>
+              <select id="${campo.id}" name="${campo.id}" ${required}>
+                <option value="">Selecione</option>
+                ${campo.options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join("")}
+              </select>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="campo">
+            <label for="${campo.id}">${escapeHtml(campo.label)}${requiredLabel}</label>
+            <input type="${campo.type}" id="${campo.id}" name="${campo.id}" ${required} />
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
 function viewNovoPedido() {
   const perfil = obterPerfilSolicitante();
   if (!perfil.nome) {
@@ -243,6 +338,10 @@ function viewNovoPedido() {
   const opcoesEndereco = hospitais
     .map((h) => `<option value="${escapeHtml(h.nome)}">${escapeHtml(h.nome)} — ${escapeHtml(h.cidade)}</option>`)
     .join("");
+
+  const tiposPedido = Object.keys(CAMPOS_POR_TIPO);
+  const tipoDefault = tiposPedido[0];
+  const camposDinamicos = renderCamposDinamicos(tipoDefault);
 
   return `
     <section class="painel">
@@ -272,8 +371,8 @@ function viewNovoPedido() {
             <input id="dataDesejada" type="datetime-local" name="dataDesejada" required value="${sugestaoData}" />
           </div>
           <div class="campo">
-            <label for="tipo">Tipo de solicitação</label>
-            <select id="tipo" name="tipo">
+            <label for="tipo">Tipo de solicitação <span class="obrigatorio">*</span></label>
+            <select id="tipo" name="tipo" required>
               <option value="amostras_pre_transfusionais">Amostras Pré-Transfusionais</option>
               <option value="amostras_outras">Amostras - Outras</option>
               <option value="coleta_externa">Coleta Externa</option>
@@ -299,6 +398,9 @@ function viewNovoPedido() {
             <label for="observacoes">Observações</label>
             <textarea id="observacoes" name="observacoes" placeholder="Detalhes relevantes para o transporte (ex.: carga refrigerada, ponto de referência, contato)"></textarea>
           </div>
+        </div>
+        <div id="containerCamposDinamicos">
+          ${camposDinamicos}
         </div>
         <div class="form-acoes">
           <button type="submit" class="btn">Enviar pedido</button>
@@ -1173,6 +1275,14 @@ function ligarEventosDaAba() {
   });
 
   main.querySelector("#formNovoPedido")?.addEventListener("submit", tratarSubmitNovoPedido);
+
+  main.querySelector("#tipo")?.addEventListener("change", (ev) => {
+    const tipoSelecionado = ev.target.value;
+    const container = document.getElementById("containerCamposDinamicos");
+    if (container) {
+      container.innerHTML = renderCamposDinamicos(tipoSelecionado);
+    }
+  });
 
   main.querySelector("#formPerfilInicial")?.addEventListener("submit", (ev) => {
     ev.preventDefault();
