@@ -151,6 +151,22 @@ Todas as respostas em JSON; mutações retransmitem o estado atualizado por SSE 
 | `/api/notificacoes?publico=&nome=` | DELETE | Limpa só as notificações daquele público |
 | `/api/reset` | POST | Restaura os dados de exemplo |
 
+## Testes automatizados (Playwright)
+
+Os testes usam [Playwright](https://playwright.dev) e cobrem as funções já existentes: API (regras de pedidos, aceite, diretoria, rotas, portaria, cadastros, notificações e reset), interface (abas por perfil, pedido do solicitante, aceite/análise/rejeição, rota, portaria, diretoria e cadastros) e fluxos de ponta a ponta por perfil.
+
+```
+npm install
+npx playwright install chromium   # só na primeira vez
+npm test                          # tudo
+npm run test:api                  # só a API
+npm run test:interface            # só a interface (sem janela)
+npm run test:fluxos               # fluxos de ponta a ponta por perfil
+npm run test:painel               # abre a interface gráfica do Playwright (UI mode)
+```
+
+O Playwright sobe sozinho uma instância do servidor na porta 4173, com dados numa pasta de teste (`test-results/servidor`), então os testes **não** alteram o `data/db.json` real. Cada teste começa com `POST /api/reset`. O relatório HTML fica em `playwright-report/` (`npx playwright show-report`).
+
 ## Limitações (é uma PoC)
 
 - Sem autenticação real — o "perfil" do solicitante (nome/setor) fica salvo no navegador de quem preenche, sem senha ou verificação.

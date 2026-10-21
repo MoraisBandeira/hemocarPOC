@@ -50,6 +50,9 @@ const HOSPITAIS_EXEMPLO = [
   { nome: "Hospital Regional Norte", cidade: "Sobral/CE", regional: "Regional Norte", endereco: "Av. Dom José, 500", telefone: "(88) 3677-2200" },
 ];
 
+// Tipos de solicitação que podem ser aceitos como "Transporte Outros" (demais são sempre Hemoce)
+const PODE_TRANSPORTE_OUTROS = ["pessoal_administrativo", "pessoal_tecnico"];
+
 function estadoPadrao() {
   return {
     motoristas: [
@@ -654,6 +657,9 @@ async function tratarApi(req, res, url) {
       if (pedido.status !== "pendente") throw new ErroApi(409, "Este pedido não está pendente.");
       if (!dados.tipoTransporte || !["hemoce", "outros"].includes(dados.tipoTransporte)) {
         throw new ErroApi(400, "Tipo de transporte inválido. Use 'hemoce' ou 'outros'.");
+      }
+      if (dados.tipoTransporte === "outros" && !PODE_TRANSPORTE_OUTROS.includes(pedido.tipo)) {
+        throw new ErroApi(400, "Transporte Outros só está disponível para pessoal administrativo e pessoal técnico.");
       }
       atualizarPedido(partes[2], { status: "aceito", tipoTransporte: dados.tipoTransporte });
       persistirETransmitir();

@@ -32,6 +32,9 @@ const TABS_POR_PERFIL = {
   ],
 };
 
+// Tipos de solicitação que podem ser aceitos como "Transporte Outros" (demais são sempre Hemoce)
+const PODE_TRANSPORTE_OUTROS = ["pessoal_administrativo", "pessoal_tecnico"];
+
 const ROTULO_STATUS_PEDIDO = {
   pendente: "Pendente",
   aguardando_diretoria: "Aguardando Aprovação",
@@ -580,7 +583,7 @@ function cardAceitarSolicitacao(pedido) {
       ${pedido.observacoes ? `<p class="card-obs">${escapeHtml(pedido.observacoes)}</p>` : ""}
       <div class="form-acoes" style="gap:8px;">
         <button type="button" class="btn" data-aceitar-hemoce="${pedido.id}">🏥 Transporte Hemoce</button>
-        <button type="button" class="btn secundario" data-aceitar-outros="${pedido.id}">🚗 Transporte Outros</button>
+        ${PODE_TRANSPORTE_OUTROS.includes(pedido.tipo) ? `<button type="button" class="btn secundario" data-aceitar-outros="${pedido.id}">🚗 Transporte Outros</button>` : ""}
       </div>
     </article>
   `;
@@ -617,7 +620,7 @@ function regiaoDoPedido(pedido, hospitais) {
 // si — não faz sentido sugerir juntar quem quer sair de manhã com quem quer
 // sair à noite, mesmo indo pro mesmo lugar.
 const JANELAS_AGRUPAMENTO_MS = {
-  equipamentos: 6 * 60 * 60 * 1000, // 6 horas
+  equipamentos: 1 * 60 * 60 * 1000, // 1 hora
   pessoal_administrativo: 1 * 60 * 60 * 1000, // 1 hora
   pessoal_tecnico: 1 * 60 * 60 * 1000, // 1 hora
   default: 1 * 60 * 60 * 1000, // 1 hora padrão
@@ -739,7 +742,7 @@ function painelSugestoesAgrupamento(gruposDestino, gruposRegiao) {
   return `
     <div class="sugestoes-agrupamento">
       <h3>Sugestões para agrupar numa rota</h3>
-      <p class="card-obs" style="margin-top:0;">Só agrupamos pedidos com horário desejado próximo (até 3h de diferença) — não faz sentido levar quem quer sair de manhã junto com quem quer sair à noite, mesmo pro mesmo lugar.</p>
+      <p class="card-obs" style="margin-top:0;">Só agrupamos pedidos com horário desejado próximo (até 1h de diferença) — não faz sentido levar quem quer sair de manhã junto com quem quer sair à noite, mesmo pro mesmo lugar.</p>
       ${gruposDestino.map((g) => chip(g, "📍")).join("")}
       ${gruposRegiao.map((g) => chip(g, "🗺️")).join("")}
     </div>
@@ -890,9 +893,9 @@ function cardPedidoAnalise(pedido, infoGrupo) {
 
   let selosGrupo = "";
   if (infoGrupo?.destinoCount > 1) {
-    selosGrupo += `<span class="badge grupo" title="Outros pedidos com o mesmo destino e horário desejado próximo (até 3h)">📍 mesmo destino ×${infoGrupo.destinoCount}</span>`;
+    selosGrupo += `<span class="badge grupo" title="Outros pedidos com o mesmo destino e horário desejado próximo (até 1h)">📍 mesmo destino ×${infoGrupo.destinoCount}</span>`;
   } else if (infoGrupo?.regiaoCount > 1) {
-    selosGrupo += `<span class="badge grupo" title="Outros pedidos na mesma região (${escapeHtml(infoGrupo.regiao)}) e horário desejado próximo (até 3h)">🗺️ mesma região ×${infoGrupo.regiaoCount}</span>`;
+    selosGrupo += `<span class="badge grupo" title="Outros pedidos na mesma região (${escapeHtml(infoGrupo.regiao)}) e horário desejado próximo (até 1h)">🗺️ mesma região ×${infoGrupo.regiaoCount}</span>`;
   }
 
   let formulario = "";

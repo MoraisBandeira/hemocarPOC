@@ -2,3 +2,8 @@
 data
 deploy
 *.md
+node_modules
+tests
+playwright.config.js
+playwright-report
+test-results
