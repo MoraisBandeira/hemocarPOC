@@ -496,6 +496,42 @@ function rotuloStatusRota(rota) {
   return "Programada";
 }
 
+/** Pergunta ao solicitante se pode juntar o pedido a outra solicitação (só local, data e hora; sem identificar quem). */
+function blocoAgrupamentoSolicitante(pedido) {
+  const ag = pedido.agrupamento;
+  if (!ag) return "";
+  const caixa = (conteudo) => `<div class="agrupamento-box" style="margin-top:10px;padding:10px;border:1px solid #ddd;border-radius:6px;">${conteudo}</div>`;
+
+  if (ag.estado === "aceito") {
+    return caixa(`<strong>✓ Você aceitou juntar esta solicitação a outra do mesmo local/região e horário.</strong>`);
+  }
+  if (ag.estado === "recusado") {
+    return caixa(`<strong>Você não quis juntar esta solicitação.</strong>`);
+  }
+
+  const lista = ag.coincidencias
+    .map((c) => `<li>${escapeHtml(c.local)} · ${escapeHtml(c.data)} às ${escapeHtml(c.hora)}</li>`)
+    .join("");
+  return caixa(`
+    <strong>Pode juntar sua solicitação?</strong>
+    <p class="card-obs">Há outra solicitação de transporte para:</p>
+    <ul>${lista}</ul>
+    <div class="form-acoes" style="gap:8px;">
+      <button type="button" class="btn sucesso pequeno" data-agrupar-sim="${pedido.id}">Sim, pode juntar</button>
+      <button type="button" class="btn secundario pequeno" data-agrupar-nao="${pedido.id}">Não</button>
+    </div>
+  `);
+}
+
+/** Linha que a equipe de transporte vê no card de análise sobre a resposta do solicitante. */
+function linhaAgrupamentoTransporte(pedido) {
+  const ag = pedido.agrupamento;
+  if (!ag) return "";
+  if (ag.estado === "aguardando") return `<p class="card-obs">⏳ Aguardando resposta do solicitante para juntar com outra solicitação do mesmo local/região e horário.</p>`;
+  if (ag.estado === "aceito") return `<p class="card-obs">🔗 Solicitante aceitou juntar com outra solicitação do mesmo local/região e horário.</p>`;
+  return `<p class="card-obs">🔗 Solicitante não quis juntar.</p>`;
+}
+
 function cardPedidoSolicitante(pedido, rotas, motoristas, veiculos) {
   const rota = pedido.rotaId ? rotas.find((r) => r.id === pedido.rotaId) : null;
   const motorista = rota ? motoristas.find((m) => m.id === rota.motoristaId) : null;
@@ -537,6 +573,7 @@ function cardPedidoSolicitante(pedido, rotas, motoristas, veiculos) {
       </dl>
       ${pedido.observacoes ? `<p class="card-obs">${escapeHtml(pedido.observacoes)}</p>` : ""}
       ${extra}
+      ${blocoAgrupamentoSolicitante(pedido)}
     </article>
   `;
 }
@@ -939,6 +976,7 @@ function cardPedidoAnalise(pedido, infoGrupo) {
         <div><dt>Tipo</dt><dd>${escapeHtml(pedido.tipo)}</dd></div>
       </dl>
       ${pedido.observacoes ? `<p class="card-obs">${escapeHtml(pedido.observacoes)}</p>` : ""}
+      ${linhaAgrupamentoTransporte(pedido)}
       ${!analisandoEste ? `
         <div class="card-acoes">
           <button class="btn perigo pequeno" data-iniciar-analise="rejeitar" data-pedido-id="${pedido.id}">Rejeitar</button>
@@ -1474,6 +1512,30 @@ function ligarEventosDaAba() {
   });
 
   main.querySelector("#formNovoPedido")?.addEventListener("submit", tratarSubmitNovoPedido);
+
+  main.querySelectorAll("[data-agrupar-sim]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      try {
+        await DB.responderAgrupamento(btn.dataset.agruparSim, "sim");
+        toast("Resposta registrada: você aceitou juntar as solicitações.");
+        renderConteudo();
+      } catch (e) {
+        toast(e.message);
+      }
+    });
+  });
+
+  main.querySelectorAll("[data-agrupar-nao]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      try {
+        await DB.responderAgrupamento(btn.dataset.agruparNao, "nao");
+        toast("Resposta registrada: você não quis juntar a solicitação.");
+        renderConteudo();
+      } catch (e) {
+        toast(e.message);
+      }
+    });
+  });
 
   main.querySelector("#tipo")?.addEventListener("change", (ev) => {
     const tipoSelecionado = ev.target.value;

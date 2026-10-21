@@ -228,10 +228,26 @@ function criarPedido(dados) {
     motivoRejeicao: null,
     rotaId: null,
     requerAprovacaoDiretoria: requerAprovacaoDiretoria,
+    agrupamento: null, // { estado: 'aguardando' | 'aceito' | 'recusado', coincidencias, respondidoEm }
     criadoEm: agoraISO(),
     atualizadoEm: agoraISO(),
   };
   estado.pedidos.push(pedido);
+
+  // Havendo outro pedido no mesmo destino/região e horário, pergunta ao solicitante se pode juntar
+  const coincidencias = encontrarCoincidencias(pedido);
+  if (coincidencias.length) {
+    pedido.agrupamento = { estado: "aguardando", coincidencias, respondidoEm: null };
+    const descricoes = coincidencias.map((c) => `${c.local} em ${c.data} às ${c.hora}`).join("; ");
+    adicionarNotificacao({
+      tipo: "agrupamento_sugerido",
+      titulo: "Pode juntar sua solicitação?",
+      mensagem: `Há outra solicitação de transporte para: ${descricoes}. Você aceita juntar a sua a ela?`,
+      publico: "solicitante",
+      solicitanteNome: pedido.solicitante,
+      pedidoId: pedido.id,
+    });
+  }
 
   adicionarNotificacao({
     tipo: "novo_pedido",
@@ -248,6 +264,63 @@ function atualizarPedido(id, patch) {
   const pedido = estado.pedidos.find((p) => p.id === id);
   if (!pedido) return null;
   Object.assign(pedido, patch, { atualizadoEm: agoraISO() });
+  return pedido;
+}
+
+// ---- Sugestão de agrupamento: avisa o solicitante quando outro pedido vai ao mesmo destino
+// (ou à mesma região) com horário próximo, e deixa ele decidir se aceita juntar ----
+const JANELA_AGRUPAMENTO_MS = 1 * 60 * 60 * 1000; // mesma janela usada na tela de análise
+// só pedidos que ainda não entraram numa rota podem ser juntados
+const STATUS_AGRUPAVEIS = ["pendente", "aguardando_diretoria", "aceito"];
+
+function regionalDoLocal(nomeLocal) {
+  const hospital = estado.hospitais.find((h) => h.nome === nomeLocal);
+  return hospital?.regional || null;
+}
+
+/** "2026-10-21T10:00" -> { data: "21/10/2026", hora: "10:00" } (formato do datetime-local usado na tela). */
+function dataEHoraLegivel(dataDesejada) {
+  const [dia, horario] = String(dataDesejada).split("T");
+  const [ano, mes, diaMes] = dia.split("-");
+  return { data: `${diaMes}/${mes}/${ano}`, hora: (horario || "").slice(0, 5) };
+}
+
+/** Outros pedidos ainda não roteirizados, no mesmo destino ou na mesma região, com horário a até 1h. */
+function encontrarCoincidencias(pedido) {
+  const regional = regionalDoLocal(pedido.destino);
+  const horario = new Date(pedido.dataDesejada).getTime();
+  const vistos = new Set();
+  const coincidencias = [];
+  estado.pedidos.forEach((outro) => {
+    if (outro.id === pedido.id || !STATUS_AGRUPAVEIS.includes(outro.status)) return;
+    const mesmoDestino = outro.destino === pedido.destino;
+    const mesmaRegiao = Boolean(regional) && regionalDoLocal(outro.destino) === regional;
+    if (!mesmoDestino && !mesmaRegiao) return;
+    if (Math.abs(new Date(outro.dataDesejada).getTime() - horario) > JANELA_AGRUPAMENTO_MS) return;
+    // mostra só local, data e hora: nunca quem fez a outra solicitação
+    const { data, hora } = dataEHoraLegivel(outro.dataDesejada);
+    const chave = `${outro.destino}|${data}|${hora}`;
+    if (vistos.has(chave)) return;
+    vistos.add(chave);
+    coincidencias.push({ local: outro.destino, data, hora });
+  });
+  return coincidencias;
+}
+
+/** Solicitante responde se aceita juntar o pedido a outro transporte. */
+function responderAgrupamento(pedidoId, { resposta }) {
+  const pedido = estado.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) throw new ErroApi(404, "Pedido não encontrado.");
+  if (!pedido.agrupamento || pedido.agrupamento.estado !== "aguardando") {
+    throw new ErroApi(409, "Não há sugestão de agrupamento aguardando resposta para este pedido.");
+  }
+  if (!["sim", "nao"].includes(resposta)) throw new ErroApi(400, "Resposta inválida. Use 'sim' ou 'nao'.");
+  pedido.agrupamento = {
+    ...pedido.agrupamento,
+    estado: resposta === "sim" ? "aceito" : "recusado",
+    respondidoEm: agoraISO(),
+  };
+  pedido.atualizadoEm = agoraISO();
   return pedido;
 }
 
@@ -632,6 +705,12 @@ async function tratarApi(req, res, url) {
     if (partes.length === 4 && partes[3] === "rejeitar" && metodo === "POST") {
       const dados = await lerCorpoJson(req);
       const pedido = rejeitarPedido(partes[2], dados.motivo);
+      persistirETransmitir();
+      return responderJson(res, 200, pedido);
+    }
+    if (partes.length === 4 && partes[3] === "agrupamento" && metodo === "POST") {
+      const dados = await lerCorpoJson(req);
+      const pedido = responderAgrupamento(partes[2], dados);
       persistirETransmitir();
       return responderJson(res, 200, pedido);
     }

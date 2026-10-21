@@ -141,6 +141,7 @@ Todas as respostas em JSON; mutações retransmitem o estado atualizado por SSE 
 | `/api/eventos` | GET | Stream SSE com o estado a cada mudança |
 | `/api/pedidos` | POST | Cria pedido |
 | `/api/pedidos/:id/rejeitar` | POST | Rejeita (`motivo`) |
+| `/api/pedidos/:id/agrupamento` | POST | Solicitante responde se aceita juntar o pedido a outro do mesmo destino/região com horário a até 1h (`resposta`: `sim` ou `nao`) |
 | `/api/rotas` | POST | Aprova um ou mais pedidos numa rota só (`pedidoIds: []`, `motoristaId`, `veiculoId`, `horarioSaida`, `previsaoTermino`) |
 | `/api/rotas/:id/editar` | POST | Edita motorista/veículo/horário/previsão de uma rota ainda programada (mesmos campos acima) |
 | `/api/rotas/:id/saida` | POST | Portaria registra a saída (`kmSaida`, `horarioSaidaReal`) — rota vira `em_transito` |
