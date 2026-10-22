@@ -46,6 +46,19 @@ const ROTULO_STATUS_PEDIDO = {
   concluido_sem_saida: "Concluído sem Saída",
 };
 
+const ROTULO_TIPO_PEDIDO = {
+  amostras_pre_transfusionais: "Amostras Pré-Transfusionais",
+  amostras_outras: "Amostras - Outras",
+  coleta_externa: "Coleta Externa",
+  doadores: "Doadores",
+  equipamentos: "Equipamentos",
+  hemocomponentes: "Hemocomponentes",
+  materiais: "Materiais",
+  medicamentos: "Medicamentos",
+  pessoal_administrativo: "Pessoal Administrativo",
+  pessoal_tecnico: "Pessoal Técnico",
+};
+
 const ROTULO_PRIORIDADE = {
   baixa: "Baixa",
   normal: "Normal",
@@ -121,6 +134,14 @@ const CAMPOS_POR_TIPO = {
   ],
 };
 
+// ids de todos os campos específicos de tipo (ex.: tipo_amostra), guardados junto do pedido
+const IDS_CAMPOS_ESPECIFICOS = Object.values(CAMPOS_POR_TIPO).flat().map((campo) => campo.id);
+
+/** Só os campos específicos do tipo, do formulário inteiro (ex.: nome, origem etc. ficam de fora). */
+function camposEspecificosDo(dados) {
+  return Object.fromEntries(Object.entries(dados).filter(([chave]) => IDS_CAMPOS_ESPECIFICOS.includes(chave)));
+}
+
 const estado = {
   perfil: localStorage.getItem("hemocar_perfil") || "solicitante",
   aba: null,
@@ -128,6 +149,7 @@ const estado = {
   selecionados: new Set(), // ids de pedidos pendentes marcados para aprovar juntos numa rota
   aprovandoLote: false, // true = mostrando o formulário de motorista/veículo/horário para a seleção
   editandoRota: null, // id da rota com o formulário de edição aberto, ou null
+  editandoPedido: null, // id do pedido (Meus Pedidos) com o formulário de edição aberto, ou null
   registrandoRota: null, // { rotaId, acao: 'saida' | 'chegada' } — formulário da Portaria aberto, ou null
   notificacoesAbertas: false,
   menuPerfilAberto: false,
@@ -173,6 +195,7 @@ const ICONE_NOTIFICACAO = {
   pedido_rejeitado: "⛔",
   rota_saiu: "🚦",
   rota_concluida: "🏁",
+  pedido_alterado: "✏️",
 };
 
 // ---------- Helpers ----------
@@ -305,7 +328,8 @@ function viewSolicitarPerfil(mensagem) {
   `;
 }
 
-function renderCamposDinamicos(tipoSelecionado) {
+/** Campos específicos do tipo; `valores` preenche os já gravados no pedido (usado na edição). */
+function renderCamposDinamicos(tipoSelecionado, valores = {}) {
   const campos = CAMPOS_POR_TIPO[tipoSelecionado] || [];
   if (campos.length === 0) return "";
 
@@ -322,7 +346,7 @@ function renderCamposDinamicos(tipoSelecionado) {
               <label for="${campo.id}">${escapeHtml(campo.label)}${requiredLabel}</label>
               <select id="${campo.id}" name="${campo.id}" ${required}>
                 <option value="">Selecione</option>
-                ${campo.options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join("")}
+                ${campo.options.map(opt => `<option value="${escapeHtml(opt)}" ${opt === valores[campo.id] ? "selected" : ""}>${escapeHtml(opt)}</option>`).join("")}
               </select>
             </div>
           `;
@@ -331,7 +355,7 @@ function renderCamposDinamicos(tipoSelecionado) {
         return `
           <div class="campo">
             <label for="${campo.id}">${escapeHtml(campo.label)}${requiredLabel}</label>
-            <input type="${campo.type}" id="${campo.id}" name="${campo.id}" ${required} />
+            <input type="${campo.type}" id="${campo.id}" name="${campo.id}" value="${escapeHtml(valores[campo.id] ?? "")}" ${required} />
           </div>
         `;
       }).join("")}
@@ -448,7 +472,7 @@ async function tratarSubmitNovoPedido(ev) {
 
   const perfil = obterPerfilSolicitante();
   try {
-    await DB.criarPedido({ ...dados, solicitante: perfil.nome, setor: perfil.setor });
+    await DB.criarPedido({ ...dados, solicitante: perfil.nome, setor: perfil.setor, camposEspecificos: camposEspecificosDo(dados) });
     toast("Pedido enviado para análise da equipe de transporte.");
     estado.aba = "meusPedidos";
     estado.pagina = 1;
@@ -532,6 +556,81 @@ function linhaAgrupamentoTransporte(pedido) {
   return `<p class="card-obs">🔗 Solicitante não quis juntar.</p>`;
 }
 
+/**
+ * Espelha a regra do servidor (pedidoEditavel): o solicitante só altera o pedido
+ * enquanto a diretoria não aprovou e o transporte não aceitou.
+ */
+function podeEditarPedido(pedido) {
+  if (pedido.status === "aguardando_diretoria") return true;
+  return pedido.status === "pendente" && !pedido.requerAprovacaoDiretoria;
+}
+
+/** Campos específicos do tipo já preenchidos no pedido (ex.: tipo de amostra, volume), para as listagens. */
+function blocoCamposEspecificos(pedido) {
+  const valores = pedido.camposEspecificos || {};
+  const preenchidos = (CAMPOS_POR_TIPO[pedido.tipo] || []).filter((campo) => valores[campo.id]);
+  if (preenchidos.length === 0) return "";
+  return `
+    <dl class="card-corpo" style="margin-top:10px;">
+      ${preenchidos.map((campo) => `<div><dt>${escapeHtml(campo.label)}</dt><dd>${escapeHtml(valores[campo.id])}</dd></div>`).join("")}
+    </dl>
+  `;
+}
+
+/** Formulário de edição do pedido, com os mesmos campos da tela de Novo Pedido. */
+function formularioEditarPedido(pedido) {
+  const hospitais = DB.listarHospitais();
+  const opcoesEndereco = (selecionado) => hospitais
+    .map((h) => `<option value="${escapeHtml(h.nome)}" ${h.nome === selecionado ? "selected" : ""}>${escapeHtml(h.nome)} — ${escapeHtml(h.cidade)}</option>`)
+    .join("");
+  const opcoesTipo = Object.keys(CAMPOS_POR_TIPO)
+    .map((tipo) => `<option value="${tipo}" ${tipo === pedido.tipo ? "selected" : ""}>${escapeHtml(ROTULO_TIPO_PEDIDO[tipo] || tipo)}</option>`)
+    .join("");
+  const opcoesPrioridade = Object.entries(ROTULO_PRIORIDADE)
+    .map(([valor, rotulo]) => `<option value="${valor}" ${valor === pedido.prioridade ? "selected" : ""}>${rotulo}</option>`)
+    .join("");
+
+  return `
+    <div class="analise-form">
+      <h4>Editar solicitação</h4>
+      <p class="card-obs">Enquanto a diretoria não aprovar ou o transporte não aceitar, você pode alterar os dados. Depois disso, não é mais possível.</p>
+      <form data-form="editar-pedido" data-pedido-id="${pedido.id}">
+        <div class="form-grid">
+          <div class="campo">
+            <label for="origemEditar-${pedido.id}">Origem</label>
+            <select id="origemEditar-${pedido.id}" name="origem" required>${opcoesEndereco(pedido.origem)}</select>
+          </div>
+          <div class="campo">
+            <label for="destinoEditar-${pedido.id}">Destino</label>
+            <select id="destinoEditar-${pedido.id}" name="destino" required>${opcoesEndereco(pedido.destino)}</select>
+          </div>
+          <div class="campo">
+            <label for="dataEditar-${pedido.id}">Data/hora desejada</label>
+            <input id="dataEditar-${pedido.id}" type="datetime-local" name="dataDesejada" required value="${escapeHtml(pedido.dataDesejada)}" />
+          </div>
+          <div class="campo">
+            <label for="tipoEditar-${pedido.id}">Tipo de solicitação</label>
+            <select id="tipoEditar-${pedido.id}" name="tipo" required>${opcoesTipo}</select>
+          </div>
+          <div class="campo">
+            <label for="prioridadeEditar-${pedido.id}">Prioridade</label>
+            <select id="prioridadeEditar-${pedido.id}" name="prioridade">${opcoesPrioridade}</select>
+          </div>
+          <div class="campo full">
+            <label for="observacoesEditar-${pedido.id}">Observações</label>
+            <textarea id="observacoesEditar-${pedido.id}" name="observacoes">${escapeHtml(pedido.observacoes || "")}</textarea>
+          </div>
+        </div>
+        <div data-campos-especificos>${renderCamposDinamicos(pedido.tipo, pedido.camposEspecificos || {})}</div>
+        <div class="form-acoes">
+          <button type="submit" class="btn sucesso">Salvar alterações</button>
+          <button type="button" class="btn secundario" data-cancelar-editar-pedido>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  `;
+}
+
 function cardPedidoSolicitante(pedido, rotas, motoristas, veiculos) {
   const rota = pedido.rotaId ? rotas.find((r) => r.id === pedido.rotaId) : null;
   const motorista = rota ? motoristas.find((m) => m.id === rota.motoristaId) : null;
@@ -571,9 +670,13 @@ function cardPedidoSolicitante(pedido, rotas, motoristas, veiculos) {
         <div><dt>Data desejada</dt><dd>${formatarData(pedido.dataDesejada)}</dd></div>
         <div><dt>Tipo</dt><dd>${escapeHtml(pedido.tipo)}</dd></div>
       </dl>
+      ${estado.editandoPedido === pedido.id ? formularioEditarPedido(pedido) : `
+        ${blocoCamposEspecificos(pedido)}
       ${pedido.observacoes ? `<p class="card-obs">${escapeHtml(pedido.observacoes)}</p>` : ""}
-      ${extra}
-      ${blocoAgrupamentoSolicitante(pedido)}
+        ${extra}
+        ${blocoAgrupamentoSolicitante(pedido)}
+        ${podeEditarPedido(pedido) ? `<div class="form-acoes"><button type="button" class="btn secundario pequeno" data-editar-pedido="${pedido.id}">Editar</button></div>` : ""}
+      `}
     </article>
   `;
 }
@@ -617,6 +720,7 @@ function cardAceitarSolicitacao(pedido) {
         <div><dt>Tipo de Solicitação</dt><dd>${escapeHtml(pedido.tipo)}</dd></div>
         <div><dt>Data Desejada</dt><dd>${formatarData(pedido.dataDesejada)}</dd></div>
       </dl>
+      ${blocoCamposEspecificos(pedido)}
       ${pedido.observacoes ? `<p class="card-obs">${escapeHtml(pedido.observacoes)}</p>` : ""}
       <div class="form-acoes" style="gap:8px;">
         <button type="button" class="btn" data-aceitar-hemoce="${pedido.id}">🏥 Transporte Hemoce</button>
@@ -975,6 +1079,7 @@ function cardPedidoAnalise(pedido, infoGrupo) {
         <div><dt>Data desejada</dt><dd>${formatarData(pedido.dataDesejada)}</dd></div>
         <div><dt>Tipo</dt><dd>${escapeHtml(pedido.tipo)}</dd></div>
       </dl>
+      ${blocoCamposEspecificos(pedido)}
       ${pedido.observacoes ? `<p class="card-obs">${escapeHtml(pedido.observacoes)}</p>` : ""}
       ${linhaAgrupamentoTransporte(pedido)}
       ${!analisandoEste ? `
@@ -1308,6 +1413,7 @@ function cardPedidoDiretoria(pedido) {
         <div><dt>Tipo de Solicitação</dt><dd>${escapeHtml(pedido.tipo)}</dd></div>
         <div><dt>Data Desejada</dt><dd>${formatarData(pedido.dataDesejada)}</dd></div>
       </dl>
+      ${blocoCamposEspecificos(pedido)}
       ${pedido.observacoes ? `<p class="card-obs">${escapeHtml(pedido.observacoes)}</p>` : ""}
       <div class="form-acoes" style="gap:8px;">
         <button type="button" class="btn" data-aprovar-diretoria="${pedido.id}">✓ Aprovar</button>
@@ -1535,6 +1641,46 @@ function ligarEventosDaAba() {
         toast(e.message);
       }
     });
+  });
+
+  main.querySelectorAll("[data-editar-pedido]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      estado.editandoPedido = btn.dataset.editarPedido;
+      renderConteudo();
+    });
+  });
+
+  main.querySelector("[data-cancelar-editar-pedido]")?.addEventListener("click", () => {
+    estado.editandoPedido = null;
+    renderConteudo();
+  });
+
+  // trocar o tipo na edição troca também os campos específicos exibidos
+  main.querySelector('form[data-form="editar-pedido"] select[name="tipo"]')?.addEventListener("change", (ev) => {
+    ev.target.form.querySelector("[data-campos-especificos]").innerHTML = renderCamposDinamicos(ev.target.value);
+  });
+
+  main.querySelector('form[data-form="editar-pedido"]')?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const form = ev.target;
+    const dados = Object.fromEntries(new FormData(form).entries());
+    if (!dados.origem || !dados.destino || !dados.dataDesejada) {
+      toast("Preencha os campos obrigatórios.");
+      return;
+    }
+    if (dados.origem === dados.destino) {
+      toast("Origem e destino não podem ser o mesmo endereço.");
+      return;
+    }
+    const perfil = obterPerfilSolicitante();
+    try {
+      await DB.editarPedido(form.dataset.pedidoId, { ...dados, solicitante: perfil.nome, setor: perfil.setor, camposEspecificos: camposEspecificosDo(dados) });
+      toast("Solicitação alterada.");
+      estado.editandoPedido = null;
+      renderConteudo();
+    } catch (e) {
+      toast(e.message);
+    }
   });
 
   main.querySelector("#tipo")?.addEventListener("change", (ev) => {

@@ -88,3 +88,14 @@ test.describe("Equipe de Transporte (interface)", () => {
     expect(motoristas.some((m) => m.nome === "Ana Ribeiro")).toBe(false);
   });
 });
+
+test.describe("Listagem de pedidos com campos específicos (interface)", () => {
+  test("Aceitar Solicitações mostra os dados específicos do pedido", async ({ page, request }) => {
+    await criarPedidoApi(request, { camposEspecificos: { tipo_amostra: "Plasma" } });
+    await abrirComoPerfil(page, "transporte");
+    await irParaAba(page, "Aceitar Solicitações");
+
+    await expect(page.locator("#conteudo")).toContainText("Tipo de Amostra");
+    await expect(page.locator("#conteudo")).toContainText("Plasma");
+  });
+});

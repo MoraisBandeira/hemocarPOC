@@ -1,5 +1,5 @@
 const { test, expect } = require("@playwright/test");
-const { resetarBanco, lerEstado, abrirComoPerfil, irParaAba, preencherCamposDinamicos } = require("../helpers");
+const { emHoras, paraDatetimeLocal, resetarBanco, lerEstado, criarPedidoApi, abrirComoPerfil, irParaAba, preencherCamposDinamicos } = require("../helpers");
 
 test.beforeEach(async ({ request }) => {
   await resetarBanco(request);
@@ -49,6 +49,45 @@ test.describe("Solicitante (interface)", () => {
     await expect(page.locator("#toast")).toHaveText("Origem e destino não podem ser o mesmo endereço.");
     const { pedidos } = await lerEstado(request);
     expect(pedidos).toHaveLength(0);
+  });
+
+  test("edita um pedido ainda pendente em Meus Pedidos", async ({ page, request }) => {
+    await criarPedidoApi(request, { solicitante: "Maria Souza" });
+    await abrirComoPerfil(page, "solicitante");
+    await irParaAba(page, "Meus Pedidos");
+
+    await page.getByRole("button", { name: "Editar" }).click();
+    await page.selectOption('form[data-form="editar-pedido"] select[name="destino"]', "Hospital Geral de Fortaleza (HGF)");
+    await page.selectOption('form[data-form="editar-pedido"] select[name="origem"]', "Hospital Universitário Walter Cantídio");
+    await preencherCamposDinamicos(page, "[data-campos-especificos]");
+    await page.getByRole("button", { name: "Salvar alterações" }).click();
+
+    await expect(page.locator("#toast")).toHaveText("Solicitação alterada.");
+    const { pedidos } = await lerEstado(request);
+    expect(pedidos[0].destino).toBe("Hospital Geral de Fortaleza (HGF)");
+    await expect(page.locator("#conteudo")).toContainText("Hospital Universitário Walter Cantídio → Hospital Geral de Fortaleza (HGF)");
+  });
+
+  test("o formulário de edição já traz os campos específicos gravados", async ({ page, request }) => {
+    await criarPedidoApi(request, { solicitante: "Maria Souza", camposEspecificos: { tipo_amostra: "Sangue total", volume_amostra: "12" } });
+    await abrirComoPerfil(page, "solicitante");
+    await irParaAba(page, "Meus Pedidos");
+    await expect(page.locator("#conteudo")).toContainText("Sangue total");
+
+    await page.getByRole("button", { name: "Editar" }).click();
+
+    await expect(page.locator('form[data-form="editar-pedido"] #tipo_amostra')).toHaveValue("Sangue total");
+    await expect(page.locator('form[data-form="editar-pedido"] #volume_amostra')).toHaveValue("12");
+  });
+
+  test("não mostra Editar depois que a diretoria aprovou", async ({ page, request }) => {
+    const pedido = await criarPedidoApi(request, { solicitante: "Maria Souza", tipo: "materiais", dataDesejada: paraDatetimeLocal(emHoras(5)) });
+    await request.post(`/api/pedidos/${pedido.id}/aprovar-diretoria`);
+    await abrirComoPerfil(page, "solicitante");
+    await irParaAba(page, "Meus Pedidos");
+
+    await expect(page.locator("#conteudo")).toContainText("Pendente");
+    await expect(page.getByRole("button", { name: "Editar" })).toHaveCount(0);
   });
 
   test("Meus Pedidos identifica o solicitante logado", async ({ page }) => {

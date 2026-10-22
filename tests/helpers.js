@@ -92,8 +92,8 @@ async function irParaAba(page, nome) {
 }
 
 /** Preenche todos os campos obrigatórios do formulário dinâmico de tipo de pedido. */
-async function preencherCamposDinamicos(page) {
-  const obrigatorios = page.locator("#containerCamposDinamicos [required]");
+async function preencherCamposDinamicos(page, seletor = "#containerCamposDinamicos") {
+  const obrigatorios = page.locator(`${seletor} [required]`);
   const quantidade = await obrigatorios.count();
   for (let i = 0; i < quantidade; i++) {
     const campo = obrigatorios.nth(i);

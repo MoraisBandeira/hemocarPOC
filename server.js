@@ -196,23 +196,37 @@ function correspondeAoPublico(notif, publico, nome) {
   return false;
 }
 
+// Tipos que, com menos de 24h de antecedência, precisam de aprovação da diretoria
+const TIPOS_REQUEREM_APROVACAO_DIRETORIA = [
+  "coleta_externa",
+  "materiais",
+  "pessoal_administrativo",
+  "pessoal_tecnico",
+];
+
+function requerAprovacaoDiretoria(tipo, dataDesejada) {
+  const diffHoras = (new Date(dataDesejada).getTime() - Date.now()) / (1000 * 60 * 60);
+  return TIPOS_REQUEREM_APROVACAO_DIRETORIA.includes(tipo) && diffHoras < 24;
+}
+
+/** Campos específicos do tipo (ex.: tipo_amostra): só chaves simples e valores de texto curtos. */
+function sanitizarCamposEspecificos(campos) {
+  if (!campos || typeof campos !== "object") return {};
+  const limpo = {};
+  Object.entries(campos).forEach(([chave, valor]) => {
+    if (/^[a-z_]{1,60}$/.test(chave) && valor !== null && valor !== undefined) {
+      limpo[chave] = String(valor).slice(0, 500);
+    }
+  });
+  return limpo;
+}
+
 function criarPedido(dados) {
   if (!dados.solicitante || !dados.origem || !dados.destino || !dados.dataDesejada) {
     throw new ErroApi(400, "Preencha solicitante, origem, destino e data desejada.");
   }
 
-  const tiposRequeremAprovacaoDiretoria = [
-    "coleta_externa",
-    "materiais",
-    "pessoal_administrativo",
-    "pessoal_tecnico",
-  ];
-
-  const agora = new Date();
-  const dataDesejada = new Date(dados.dataDesejada);
-  const diffMs = dataDesejada.getTime() - agora.getTime();
-  const diffHoras = diffMs / (1000 * 60 * 60);
-  const requerAprovacaoDiretoria = tiposRequeremAprovacaoDiretoria.includes(dados.tipo) && diffHoras < 24;
+  const necessitaDiretoria = requerAprovacaoDiretoria(dados.tipo, dados.dataDesejada);
 
   const pedido = {
     id: novoId("ped"),
@@ -224,30 +238,17 @@ function criarPedido(dados) {
     tipo: dados.tipo || "outro",
     prioridade: dados.prioridade || "normal",
     observacoes: dados.observacoes || "",
-    status: requerAprovacaoDiretoria ? "aguardando_diretoria" : "pendente", // pendente | aguardando_diretoria | roteirizado | rejeitado | concluido
+    camposEspecificos: sanitizarCamposEspecificos(dados.camposEspecificos),
+    status: necessitaDiretoria ? "aguardando_diretoria" : "pendente", // pendente | aguardando_diretoria | roteirizado | rejeitado | concluido
     motivoRejeicao: null,
     rotaId: null,
-    requerAprovacaoDiretoria: requerAprovacaoDiretoria,
+    requerAprovacaoDiretoria: necessitaDiretoria,
     agrupamento: null, // { estado: 'aguardando' | 'aceito' | 'recusado', coincidencias, respondidoEm }
     criadoEm: agoraISO(),
     atualizadoEm: agoraISO(),
   };
   estado.pedidos.push(pedido);
-
-  // Havendo outro pedido no mesmo destino/região e horário, pergunta ao solicitante se pode juntar
-  const coincidencias = encontrarCoincidencias(pedido);
-  if (coincidencias.length) {
-    pedido.agrupamento = { estado: "aguardando", coincidencias, respondidoEm: null };
-    const descricoes = coincidencias.map((c) => `${c.local} em ${c.data} às ${c.hora}`).join("; ");
-    adicionarNotificacao({
-      tipo: "agrupamento_sugerido",
-      titulo: "Pode juntar sua solicitação?",
-      mensagem: `Há outra solicitação de transporte para: ${descricoes}. Você aceita juntar a sua a ela?`,
-      publico: "solicitante",
-      solicitanteNome: pedido.solicitante,
-      pedidoId: pedido.id,
-    });
-  }
+  avaliarAgrupamento(pedido);
 
   adicionarNotificacao({
     tipo: "novo_pedido",
@@ -305,6 +306,78 @@ function encontrarCoincidencias(pedido) {
     coincidencias.push({ local: outro.destino, data, hora });
   });
   return coincidencias;
+}
+
+/** Procura outros pedidos próximos ao pedido e, se achar, pergunta ao solicitante se pode juntar. */
+function avaliarAgrupamento(pedido) {
+  pedido.agrupamento = null;
+  const coincidencias = encontrarCoincidencias(pedido);
+  if (!coincidencias.length) return;
+
+  pedido.agrupamento = { estado: "aguardando", coincidencias, respondidoEm: null };
+  const descricoes = coincidencias.map((c) => `${c.local} em ${c.data} às ${c.hora}`).join("; ");
+  adicionarNotificacao({
+    tipo: "agrupamento_sugerido",
+    titulo: "Pode juntar sua solicitação?",
+    mensagem: `Há outra solicitação de transporte para: ${descricoes}. Você aceita juntar a sua a ela?`,
+    publico: "solicitante",
+    solicitanteNome: pedido.solicitante,
+    pedidoId: pedido.id,
+  });
+}
+
+/**
+ * Solicitante pode alterar o pedido só enquanto ele não foi aprovado pela
+ * diretoria nem aceito pela equipe de transporte: aguardando diretoria, ou
+ * pendente sem exigência de diretoria (pendente com exigência significa que a
+ * diretoria já aprovou).
+ */
+function pedidoEditavel(pedido) {
+  if (pedido.status === "aguardando_diretoria") return true;
+  return pedido.status === "pendente" && !pedido.requerAprovacaoDiretoria;
+}
+
+/** Solicitante altera os dados do próprio pedido (enquanto ainda é editável). */
+function editarPedido(pedidoId, dados) {
+  const pedido = estado.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) throw new ErroApi(404, "Pedido não encontrado.");
+  if ((dados.solicitante || "").trim().toLowerCase() !== pedido.solicitante.trim().toLowerCase()) {
+    throw new ErroApi(403, "Só quem fez o pedido pode alterá-lo.");
+  }
+  if (!pedidoEditavel(pedido)) {
+    throw new ErroApi(409, "Este pedido não pode mais ser alterado: já foi aprovado pela diretoria ou aceito pela equipe de transporte.");
+  }
+  if (!dados.origem || !dados.destino || !dados.dataDesejada || !dados.tipo) {
+    throw new ErroApi(400, "Preencha origem, destino, data desejada e tipo.");
+  }
+
+  const necessitaDiretoria = requerAprovacaoDiretoria(dados.tipo, dados.dataDesejada);
+  Object.assign(pedido, {
+    setor: dados.setor ?? pedido.setor,
+    origem: dados.origem,
+    destino: dados.destino,
+    dataDesejada: dados.dataDesejada,
+    tipo: dados.tipo,
+    prioridade: dados.prioridade || "normal",
+    observacoes: dados.observacoes || "",
+    camposEspecificos: sanitizarCamposEspecificos(dados.camposEspecificos),
+    status: necessitaDiretoria ? "aguardando_diretoria" : "pendente",
+    requerAprovacaoDiretoria: necessitaDiretoria,
+    atualizadoEm: agoraISO(),
+  });
+  // horário, destino ou tipo mudaram: a sugestão de agrupamento precisa ser recalculada
+  avaliarAgrupamento(pedido);
+
+  const { data, hora } = dataEHoraLegivel(pedido.dataDesejada);
+  adicionarNotificacao({
+    tipo: "pedido_alterado",
+    titulo: "Solicitação alterada",
+    mensagem: `${pedido.solicitante} alterou a solicitação: ${pedido.origem} → ${pedido.destino}, ${data} às ${hora}.`,
+    publico: "transporte",
+    pedidoId: pedido.id,
+  });
+
+  return pedido;
 }
 
 /** Solicitante responde se aceita juntar o pedido a outro transporte. */
@@ -705,6 +778,12 @@ async function tratarApi(req, res, url) {
     if (partes.length === 4 && partes[3] === "rejeitar" && metodo === "POST") {
       const dados = await lerCorpoJson(req);
       const pedido = rejeitarPedido(partes[2], dados.motivo);
+      persistirETransmitir();
+      return responderJson(res, 200, pedido);
+    }
+    if (partes.length === 4 && partes[3] === "editar" && metodo === "POST") {
+      const dados = await lerCorpoJson(req);
+      const pedido = editarPedido(partes[2], dados);
       persistirETransmitir();
       return responderJson(res, 200, pedido);
     }
