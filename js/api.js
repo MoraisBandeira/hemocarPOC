@@ -76,6 +76,9 @@ const DB = (() => {
   function aprovarPedidos(dados) {
     return requisitar("/api/rotas", { method: "POST", body: JSON.stringify(dados) });
   }
+  function cancelarPedido(pedidoId, motivo) {
+    return requisitar(`/api/pedidos/${pedidoId}/cancelar`, { method: "POST", body: JSON.stringify({ motivo }) });
+  }
   function rejeitarPedido(pedidoId, motivo) {
     return requisitar(`/api/pedidos/${pedidoId}/rejeitar`, { method: "POST", body: JSON.stringify({ motivo }) });
   }
@@ -150,6 +153,7 @@ const DB = (() => {
     listarRotas,
     aprovarPedidos,
     rejeitarPedido,
+    cancelarPedido,
     aprovarPorDiretoria,
     aceitarSolicitacao,
     responderAgrupamento,

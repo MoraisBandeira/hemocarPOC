@@ -57,21 +57,21 @@ test.describe("Fluxo da Equipe de Transporte", () => {
     });
   });
 
-  test("rejeita um pedido em análise informando o motivo", async ({ page, request }) => {
+  test("rejeita uma solicitação em Aceitar Solicitações informando o motivo", async ({ page, request }) => {
     const pedido = await criarPedidoApi(request);
-    await request.post(`/api/pedidos/${pedido.id}/aceitar`, { data: { tipoTransporte: "hemoce" } });
     await abrirComoPerfil(page, "transporte");
-    await irParaAba(page, "Análise de Pedidos");
+    await irParaAba(page, "Aceitar Solicitações");
 
-    await test.step("abre a rejeição do pedido e informa o motivo", async () => {
+    await test.step("abre a rejeição da solicitação e informa o motivo", async () => {
       await page.locator(`[data-iniciar-analise="rejeitar"][data-pedido-id="${pedido.id}"]`).click();
       await page.fill(`#motivo-${pedido.id}`, "Sem motorista disponível");
       await page.getByRole("button", { name: "Confirmar rejeição" }).click();
       await expect(page.locator("#toast")).toHaveText("Pedido rejeitado.");
     });
 
-    await test.step("o pedido sai da fila e o contador de rejeitados aumenta", async () => {
-      await expect(page.locator("#conteudo")).toContainText("Nenhum pedido pendente de análise no momento.");
+    await test.step("a solicitação sai da fila e o contador de rejeitados aumenta", async () => {
+      await expect(page.locator("#conteudo")).toContainText("Nenhuma solicitação aguardando aceitação.");
+      await irParaAba(page, "Análise de Pedidos");
       await expect(page.locator(".stat-card", { hasText: "Rejeitados" }).locator(".valor")).toHaveText("1");
     });
   });

@@ -640,6 +640,7 @@ textarea {
 .badge.roteirizado { background: var(--status-roteirizado-bg); color: var(--status-roteirizado-fg); }
 .badge.em_transito { background: var(--status-transito-bg); color: var(--status-transito-fg); }
 .badge.rejeitado { background: var(--status-rejeitado-bg); color: var(--status-rejeitado-fg); }
+.badge.cancelado { background: var(--status-rejeitado-bg); color: var(--status-rejeitado-fg); }
 .badge.concluido { background: var(--status-concluido-bg); color: var(--status-concluido-fg); }
 .badge.disponivel { background: var(--status-roteirizado-bg); color: var(--status-roteirizado-fg); }
 .badge.em_uso, .badge.em_rota { background: var(--status-pendente-bg); color: var(--status-pendente-fg); }

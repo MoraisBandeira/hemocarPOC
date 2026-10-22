@@ -42,6 +42,7 @@ const ROTULO_STATUS_PEDIDO = {
   roteirizado: "Roteirizado",
   em_transito: "Em trânsito",
   rejeitado: "Rejeitado",
+  cancelado: "Cancelado",
   concluido: "Concluído",
   concluido_sem_saida: "Concluído sem Saída",
 };
@@ -57,6 +58,20 @@ const ROTULO_TIPO_PEDIDO = {
   medicamentos: "Medicamentos",
   pessoal_administrativo: "Pessoal Administrativo",
   pessoal_tecnico: "Pessoal Técnico",
+};
+
+// Motivos que a equipe de transporte pode escolher ao cancelar (o automático não aparece aqui)
+const MOTIVOS_CANCELAMENTO_TRANSPORTE = [
+  { valor: "solicitante", rotulo: "Cancelada pelo solicitante" },
+  { valor: "veiculo", rotulo: "Cancelada por indisponibilidade de transporte (veículo)" },
+  { valor: "motorista", rotulo: "Cancelada por indisponibilidade de motorista" },
+];
+
+const ROTULO_MOTIVO_CANCELAMENTO = {
+  solicitante: "Cancelada pelo solicitante.",
+  veiculo: "Cancelada por indisponibilidade de transporte (veículo).",
+  motorista: "Cancelada por indisponibilidade de motorista.",
+  sem_resposta: "Cancelado por não responder em tempo hábil (automático, 24h após o horário que sairia).",
 };
 
 const ROTULO_PRIORIDADE = {
@@ -640,6 +655,9 @@ function cardPedidoSolicitante(pedido, rotas, motoristas, veiculos) {
   if (pedido.status === "rejeitado" && pedido.motivoRejeicao) {
     extra = `<p class="card-obs">Motivo da rejeição: ${escapeHtml(pedido.motivoRejeicao)}</p>`;
   }
+  if (pedido.status === "cancelado" && pedido.motivoCancelamento) {
+    extra = `<p class="card-obs">Motivo do cancelamento: ${escapeHtml(ROTULO_MOTIVO_CANCELAMENTO[pedido.motivoCancelamento] || pedido.motivoCancelamento)}</p>`;
+  }
   if (rota) {
     extra += `
       <dl class="card-corpo" style="margin-top:10px;">
@@ -703,7 +721,27 @@ function viewAceitarSolicitacoes() {
   `;
 }
 
+/** Formulário para informar o motivo da rejeição (usado na aba Aceitar Solicitações). */
+function formularioRejeitarPedido(pedido) {
+  return `
+    <div class="analise-form">
+      <h4>Rejeitar pedido</h4>
+      <form data-form="rejeitar" data-pedido-id="${pedido.id}">
+        <div class="campo full">
+          <label for="motivo-${pedido.id}">Motivo da rejeição</label>
+          <textarea id="motivo-${pedido.id}" name="motivo" required placeholder="Ex.: Sem disponibilidade de veículo para o horário solicitado"></textarea>
+        </div>
+        <div class="form-acoes">
+          <button type="submit" class="btn perigo">Confirmar rejeição</button>
+          <button type="button" class="btn secundario" data-cancelar-analise>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  `;
+}
+
 function cardAceitarSolicitacao(pedido) {
+  const rejeitandoEste = estado.analisando?.pedidoId === pedido.id && estado.analisando.acao === "rejeitar";
   return `
     <article class="card">
       <div class="card-topo">
@@ -722,10 +760,13 @@ function cardAceitarSolicitacao(pedido) {
       </dl>
       ${blocoCamposEspecificos(pedido)}
       ${pedido.observacoes ? `<p class="card-obs">${escapeHtml(pedido.observacoes)}</p>` : ""}
-      <div class="form-acoes" style="gap:8px;">
-        <button type="button" class="btn" data-aceitar-hemoce="${pedido.id}">🏥 Transporte Hemoce</button>
-        ${PODE_TRANSPORTE_OUTROS.includes(pedido.tipo) ? `<button type="button" class="btn secundario" data-aceitar-outros="${pedido.id}">🚗 Transporte Outros</button>` : ""}
-      </div>
+      ${rejeitandoEste ? formularioRejeitarPedido(pedido) : `
+        <div class="form-acoes" style="gap:8px;">
+          <button type="button" class="btn" data-aceitar-hemoce="${pedido.id}">🏥 Transporte Hemoce</button>
+          ${PODE_TRANSPORTE_OUTROS.includes(pedido.tipo) ? `<button type="button" class="btn secundario" data-aceitar-outros="${pedido.id}">🚗 Transporte Outros</button>` : ""}
+          <button type="button" class="btn perigo" data-iniciar-analise="rejeitar" data-pedido-id="${pedido.id}">✕ Rejeitar</button>
+        </div>
+      `}
     </article>
   `;
 }
@@ -1040,18 +1081,22 @@ function cardPedidoAnalise(pedido, infoGrupo) {
   }
 
   let formulario = "";
-  if (analisandoEste === "rejeitar") {
+  if (analisandoEste === "cancelar") {
+    const opcoes = MOTIVOS_CANCELAMENTO_TRANSPORTE.map((m) => `<option value="${m.valor}">${escapeHtml(m.rotulo)}</option>`).join("");
     formulario = `
       <div class="analise-form">
-        <h4>Rejeitar pedido</h4>
-        <form data-form="rejeitar" data-pedido-id="${pedido.id}">
+        <h4>Cancelar pedido</h4>
+        <form data-form="cancelar" data-pedido-id="${pedido.id}">
           <div class="campo full">
-            <label for="motivo-${pedido.id}">Motivo da rejeição</label>
-            <textarea id="motivo-${pedido.id}" name="motivo" required placeholder="Ex.: Sem disponibilidade de veículo para o horário solicitado"></textarea>
+            <label for="motivoCancelamento-${pedido.id}">Motivo do cancelamento</label>
+            <select id="motivoCancelamento-${pedido.id}" name="motivo" required>
+              <option value="" disabled selected>Selecione o motivo</option>
+              ${opcoes}
+            </select>
           </div>
           <div class="form-acoes">
-            <button type="submit" class="btn perigo">Confirmar rejeição</button>
-            <button type="button" class="btn secundario" data-cancelar-analise>Cancelar</button>
+            <button type="submit" class="btn perigo">Confirmar cancelamento</button>
+            <button type="button" class="btn secundario" data-cancelar-analise>Voltar</button>
           </div>
         </form>
       </div>
@@ -1084,7 +1129,7 @@ function cardPedidoAnalise(pedido, infoGrupo) {
       ${linhaAgrupamentoTransporte(pedido)}
       ${!analisandoEste ? `
         <div class="card-acoes">
-          <button class="btn perigo pequeno" data-iniciar-analise="rejeitar" data-pedido-id="${pedido.id}">Rejeitar</button>
+          <button class="btn secundario pequeno" data-iniciar-analise="cancelar" data-pedido-id="${pedido.id}">Cancelar pedido</button>
         </div>
       ` : ""}
       ${formulario}
@@ -1766,6 +1811,24 @@ function ligarEventosDaAba() {
       await DB.aprovarPedidos({ pedidoIds: [...estado.selecionados], ...dados });
       toast("Rota escalada com sucesso.");
       limparSelecaoAnalise();
+      renderConteudo();
+    } catch (e) {
+      toast(e.message);
+    }
+  });
+
+  main.querySelector('form[data-form="cancelar"]')?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const form = ev.target;
+    const { motivo } = Object.fromEntries(new FormData(form).entries());
+    if (!motivo) {
+      toast("Selecione o motivo do cancelamento.");
+      return;
+    }
+    try {
+      await DB.cancelarPedido(form.dataset.pedidoId, motivo);
+      toast("Pedido cancelado.");
+      estado.analisando = null;
       renderConteudo();
     } catch (e) {
       toast(e.message);

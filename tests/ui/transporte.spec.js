@@ -1,5 +1,5 @@
 const { test, expect } = require("@playwright/test");
-const { resetarBanco, lerEstado, criarPedidoApi, abrirComoPerfil, irParaAba } = require("../helpers");
+const { resetarBanco, lerEstado, criarPedidoApi, aceitarPedidoApi, abrirComoPerfil, irParaAba } = require("../helpers");
 
 test.beforeEach(async ({ request }) => {
   await resetarBanco(request);
@@ -52,11 +52,10 @@ test.describe("Equipe de Transporte (interface)", () => {
     }).toBe("outros");
   });
 
-  test("rejeita um pedido aceito informando o motivo", async ({ page, request }) => {
+  test("rejeita uma solicitação na aba Aceitar Solicitações informando o motivo", async ({ page, request }) => {
     const pedido = await criarPedidoApi(request);
-    await request.post(`/api/pedidos/${pedido.id}/aceitar`, { data: { tipoTransporte: "hemoce" } });
     await abrirComoPerfil(page, "transporte");
-    await irParaAba(page, "Análise de Pedidos");
+    await irParaAba(page, "Aceitar Solicitações");
 
     await page.locator(`[data-iniciar-analise="rejeitar"][data-pedido-id="${pedido.id}"]`).click();
     await page.fill(`#motivo-${pedido.id}`, "Sem veículo disponível no horário");
@@ -97,5 +96,22 @@ test.describe("Listagem de pedidos com campos específicos (interface)", () => {
 
     await expect(page.locator("#conteudo")).toContainText("Tipo de Amostra");
     await expect(page.locator("#conteudo")).toContainText("Plasma");
+  });
+});
+
+test.describe("Cancelamento na análise (interface)", () => {
+  test("cancela um pedido em análise informando o motivo", async ({ page, request }) => {
+    const pedido = await criarPedidoApi(request, { solicitante: "Maria Souza" });
+    await aceitarPedidoApi(request, pedido.id);
+    await abrirComoPerfil(page, "transporte");
+    await irParaAba(page, "Análise de Pedidos");
+
+    await page.getByRole("button", { name: "Cancelar pedido" }).click();
+    await page.selectOption('form[data-form="cancelar"] select[name="motivo"]', "veiculo");
+    await page.getByRole("button", { name: "Confirmar cancelamento" }).click();
+
+    await expect(page.locator("#toast")).toHaveText("Pedido cancelado.");
+    const { pedidos } = await lerEstado(request);
+    expect(pedidos[0].status).toBe("cancelado");
   });
 });

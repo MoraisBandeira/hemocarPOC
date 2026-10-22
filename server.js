@@ -453,6 +453,16 @@ function marcarPedidosExpirados() {
   let houveMudanca = false;
 
   estado.pedidos.forEach((pedido) => {
+    // Pedido aguardando análise que passou 24h do horário desejado sem ser analisado: cancela automaticamente
+    if (pedido.status === "aceito") {
+      const horasPassadas = (agora.getTime() - new Date(pedido.dataDesejada).getTime()) / (1000 * 60 * 60);
+      if (horasPassadas > 24) {
+        cancelarPedidoComMotivo(pedido, "sem_resposta");
+        houveMudanca = true;
+      }
+      return;
+    }
+
     // Só processa pedidos que ainda não foram concluídos ou rejeitados
     if (["pendente", "aguardando_diretoria", "roteirizado", "em_transito"].includes(pedido.status)) {
       const dataDesejada = new Date(pedido.dataDesejada);
@@ -634,6 +644,39 @@ function editarRota(rotaId, { motoristaId, veiculoId, horarioSaida, previsaoTerm
   return { rota };
 }
 
+// Motivos de cancelamento de pedidos aguardando análise. O último é automático:
+// o servidor aplica sozinho quando o pedido passa 24h do horário desejado de saída.
+const MOTIVOS_CANCELAMENTO = {
+  solicitante: "Cancelada pelo solicitante.",
+  veiculo: "Cancelada por indisponibilidade de transporte (veículo).",
+  motorista: "Cancelada por indisponibilidade de motorista.",
+  sem_resposta: "Cancelado por não responder em tempo hábil (automático, 24h após o horário que sairia).",
+};
+const MOTIVOS_CANCELAMENTO_MANUAIS = ["solicitante", "veiculo", "motorista"];
+
+/** Cancela o pedido e avisa o solicitante com o motivo. */
+function cancelarPedidoComMotivo(pedido, motivo) {
+  atualizarPedido(pedido.id, { status: "cancelado", motivoCancelamento: motivo });
+  adicionarNotificacao({
+    tipo: "pedido_cancelado",
+    titulo: "Pedido cancelado",
+    mensagem: `Seu pedido (${pedido.origem} → ${pedido.destino}) foi cancelado. ${MOTIVOS_CANCELAMENTO[motivo]}`,
+    publico: "solicitante",
+    solicitanteNome: pedido.solicitante,
+    pedidoId: pedido.id,
+  });
+}
+
+/** Equipe de transporte cancela um pedido ainda aguardando análise, informando o motivo. */
+function cancelarPedido(pedidoId, { motivo }) {
+  const pedido = estado.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) throw new ErroApi(404, "Pedido não encontrado.");
+  if (pedido.status !== "aceito") throw new ErroApi(409, "Só é possível cancelar pedidos aguardando análise.");
+  if (!MOTIVOS_CANCELAMENTO_MANUAIS.includes(motivo)) throw new ErroApi(400, "Motivo de cancelamento inválido.");
+  cancelarPedidoComMotivo(pedido, motivo);
+  return pedido;
+}
+
 function rejeitarPedido(pedidoId, motivo) {
   const pedido = estado.pedidos.find((p) => p.id === pedidoId);
   if (!pedido) throw new ErroApi(404, "Pedido não encontrado.");
@@ -805,6 +848,12 @@ async function tratarApi(req, res, url) {
         publico: "transporte",
         pedidoId: pedido.id,
       });
+      persistirETransmitir();
+      return responderJson(res, 200, pedido);
+    }
+    if (partes.length === 4 && partes[3] === "cancelar" && metodo === "POST") {
+      const dados = await lerCorpoJson(req);
+      const pedido = cancelarPedido(partes[2], dados);
       persistirETransmitir();
       return responderJson(res, 200, pedido);
     }
