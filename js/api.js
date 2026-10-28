@@ -79,6 +79,9 @@ const DB = (() => {
   function cancelarPedido(pedidoId, motivo) {
     return requisitar(`/api/pedidos/${pedidoId}/cancelar`, { method: "POST", body: JSON.stringify({ motivo }) });
   }
+  function cancelarPedidoSolicitante(pedidoId, solicitante, justificativa) {
+    return requisitar(`/api/pedidos/${pedidoId}/cancelar-solicitante`, { method: "POST", body: JSON.stringify({ solicitante, justificativa }) });
+  }
   function rejeitarPedido(pedidoId, motivo) {
     return requisitar(`/api/pedidos/${pedidoId}/rejeitar`, { method: "POST", body: JSON.stringify({ motivo }) });
   }
@@ -154,6 +157,7 @@ const DB = (() => {
     aprovarPedidos,
     rejeitarPedido,
     cancelarPedido,
+    cancelarPedidoSolicitante,
     aprovarPorDiretoria,
     aceitarSolicitacao,
     responderAgrupamento,

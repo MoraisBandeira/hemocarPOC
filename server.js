@@ -241,6 +241,7 @@ function criarPedido(dados) {
     camposEspecificos: sanitizarCamposEspecificos(dados.camposEspecificos),
     status: necessitaDiretoria ? "aguardando_diretoria" : "pendente", // pendente | aguardando_diretoria | roteirizado | rejeitado | concluido
     motivoRejeicao: null,
+    justificativaCancelamento: null,
     rotaId: null,
     requerAprovacaoDiretoria: necessitaDiretoria,
     agrupamento: null, // { estado: 'aguardando' | 'aceito' | 'recusado', coincidencias, respondidoEm }
@@ -655,8 +656,8 @@ const MOTIVOS_CANCELAMENTO = {
 const MOTIVOS_CANCELAMENTO_MANUAIS = ["solicitante", "veiculo", "motorista"];
 
 /** Cancela o pedido e avisa o solicitante com o motivo. */
-function cancelarPedidoComMotivo(pedido, motivo) {
-  atualizarPedido(pedido.id, { status: "cancelado", motivoCancelamento: motivo });
+function cancelarPedidoComMotivo(pedido, motivo, patch = {}) {
+  atualizarPedido(pedido.id, { status: "cancelado", motivoCancelamento: motivo, ...patch });
   adicionarNotificacao({
     tipo: "pedido_cancelado",
     titulo: "Pedido cancelado",
@@ -674,6 +675,45 @@ function cancelarPedido(pedidoId, { motivo }) {
   if (pedido.status !== "aceito") throw new ErroApi(409, "Só é possível cancelar pedidos aguardando análise.");
   if (!MOTIVOS_CANCELAMENTO_MANUAIS.includes(motivo)) throw new ErroApi(400, "Motivo de cancelamento inválido.");
   cancelarPedidoComMotivo(pedido, motivo);
+  return pedido;
+}
+
+// Status em que o solicitante ainda pode desistir do pedido. Roteirizado conta: o cancelamento
+// só é bloqueado depois que a portaria registra a saída da rota.
+const STATUS_CANCELAVEL_SOLICITANTE = ["pendente", "aguardando_diretoria", "aceito", "roteirizado"];
+
+/** Solicitante cancela o próprio pedido, desde que ele ainda não esteja em rota. */
+function cancelarPedidoSolicitante(pedidoId, dados) {
+  const pedido = estado.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) throw new ErroApi(404, "Pedido não encontrado.");
+  if ((dados.solicitante || "").trim().toLowerCase() !== pedido.solicitante.trim().toLowerCase()) {
+    throw new ErroApi(403, "Só quem fez o pedido pode cancelá-lo.");
+  }
+  const rota = pedido.rotaId ? estado.rotas.find((r) => r.id === pedido.rotaId) : null;
+  if (rota && rota.status !== "programada") {
+    throw new ErroApi(409, "Não é possível cancelar: a saída do veículo já foi registrada na portaria.");
+  }
+  if (!STATUS_CANCELAVEL_SOLICITANTE.includes(pedido.status)) {
+    throw new ErroApi(409, "Este pedido não pode mais ser cancelado.");
+  }
+  const justificativa = (dados.justificativa || "").trim();
+  if (!justificativa) throw new ErroApi(400, "Informe a justificativa do cancelamento.");
+
+  const patch = { justificativaCancelamento: justificativa };
+  if (rota) {
+    // tira o pedido da rota programada; se era o único, a rota sai junto e libera motorista e veículo
+    rota.pedidoIds = rota.pedidoIds.filter((id) => id !== pedido.id);
+    if (rota.pedidoIds.length === 0) estado.rotas.splice(estado.rotas.indexOf(rota), 1);
+    patch.rotaId = null;
+  }
+  cancelarPedidoComMotivo(pedido, "solicitante", patch);
+  adicionarNotificacao({
+    tipo: "pedido_cancelado",
+    titulo: "Pedido cancelado pelo solicitante",
+    mensagem: `${pedido.solicitante} cancelou o pedido (${pedido.origem} → ${pedido.destino}). Justificativa: ${justificativa}`,
+    publico: "transporte",
+    pedidoId: pedido.id,
+  });
   return pedido;
 }
 
@@ -854,6 +894,12 @@ async function tratarApi(req, res, url) {
     if (partes.length === 4 && partes[3] === "cancelar" && metodo === "POST") {
       const dados = await lerCorpoJson(req);
       const pedido = cancelarPedido(partes[2], dados);
+      persistirETransmitir();
+      return responderJson(res, 200, pedido);
+    }
+    if (partes.length === 4 && partes[3] === "cancelar-solicitante" && metodo === "POST") {
+      const dados = await lerCorpoJson(req);
+      const pedido = cancelarPedidoSolicitante(partes[2], dados);
       persistirETransmitir();
       return responderJson(res, 200, pedido);
     }

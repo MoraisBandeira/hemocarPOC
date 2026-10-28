@@ -165,6 +165,7 @@ const estado = {
   aprovandoLote: false, // true = mostrando o formulário de motorista/veículo/horário para a seleção
   editandoRota: null, // id da rota com o formulário de edição aberto, ou null
   editandoPedido: null, // id do pedido (Meus Pedidos) com o formulário de edição aberto, ou null
+  cancelandoPedido: null, // id do pedido (Meus Pedidos) com o formulário de cancelamento aberto, ou null
   registrandoRota: null, // { rotaId, acao: 'saida' | 'chegada' } — formulário da Portaria aberto, ou null
   notificacoesAbertas: false,
   menuPerfilAberto: false,
@@ -580,6 +581,47 @@ function podeEditarPedido(pedido) {
   return pedido.status === "pendente" && !pedido.requerAprovacaoDiretoria;
 }
 
+/**
+ * Espelha a regra do servidor (cancelarPedidoSolicitante): o solicitante desiste
+ * enquanto a portaria não tiver registrado a saída da rota do pedido.
+ */
+function podeCancelarPedidoSolicitante(pedido, rota) {
+  if (rota && rota.status !== "programada") return false;
+  return ["pendente", "aguardando_diretoria", "aceito", "roteirizado"].includes(pedido.status);
+}
+
+/** Formulário que pede a justificativa antes de cancelar o pedido do solicitante. */
+function formularioCancelarPedido(pedido) {
+  return `
+    <div class="analise-form">
+      <h4>Cancelar pedido</h4>
+      <p class="card-obs">Informe o motivo do cancelamento. A equipe de transporte verá esta justificativa.</p>
+      <form data-form="cancelar-pedido-solicitante" data-pedido-id="${pedido.id}">
+        <div class="campo full">
+          <label for="justificativaCancelamento-${pedido.id}">Justificativa</label>
+          <textarea id="justificativaCancelamento-${pedido.id}" name="justificativa" required></textarea>
+        </div>
+        <div class="form-acoes">
+          <button type="submit" class="btn perigo">Confirmar cancelamento</button>
+          <button type="button" class="btn secundario" data-fechar-cancelamento>Voltar</button>
+        </div>
+      </form>
+    </div>
+  `;
+}
+
+/** Botões Editar e Cancelar pedido do card do solicitante, conforme o status do pedido. */
+function blocoAcoesSolicitante(pedido, rota) {
+  const editar = podeEditarPedido(pedido)
+    ? `<button type="button" class="btn secundario pequeno" data-editar-pedido="${pedido.id}">Editar</button>`
+    : "";
+  const cancelar = podeCancelarPedidoSolicitante(pedido, rota)
+    ? `<button type="button" class="btn perigo pequeno" data-abrir-cancelamento="${pedido.id}">Cancelar pedido</button>`
+    : "";
+  if (!editar && !cancelar) return "";
+  return `<div class="form-acoes">${editar}${cancelar}</div>`;
+}
+
 /** Campos específicos do tipo já preenchidos no pedido (ex.: tipo de amostra, volume), para as listagens. */
 function blocoCamposEspecificos(pedido) {
   const valores = pedido.camposEspecificos || {};
@@ -658,6 +700,9 @@ function cardPedidoSolicitante(pedido, rotas, motoristas, veiculos) {
   if (pedido.status === "cancelado" && pedido.motivoCancelamento) {
     extra = `<p class="card-obs">Motivo do cancelamento: ${escapeHtml(ROTULO_MOTIVO_CANCELAMENTO[pedido.motivoCancelamento] || pedido.motivoCancelamento)}</p>`;
   }
+  if (pedido.status === "cancelado" && pedido.justificativaCancelamento) {
+    extra += `<p class="card-obs">Justificativa: ${escapeHtml(pedido.justificativaCancelamento)}</p>`;
+  }
   if (rota) {
     extra += `
       <dl class="card-corpo" style="margin-top:10px;">
@@ -688,12 +733,12 @@ function cardPedidoSolicitante(pedido, rotas, motoristas, veiculos) {
         <div><dt>Data desejada</dt><dd>${formatarData(pedido.dataDesejada)}</dd></div>
         <div><dt>Tipo</dt><dd>${escapeHtml(pedido.tipo)}</dd></div>
       </dl>
-      ${estado.editandoPedido === pedido.id ? formularioEditarPedido(pedido) : `
+      ${estado.editandoPedido === pedido.id ? formularioEditarPedido(pedido) : estado.cancelandoPedido === pedido.id ? formularioCancelarPedido(pedido) : `
         ${blocoCamposEspecificos(pedido)}
       ${pedido.observacoes ? `<p class="card-obs">${escapeHtml(pedido.observacoes)}</p>` : ""}
         ${extra}
         ${blocoAgrupamentoSolicitante(pedido)}
-        ${podeEditarPedido(pedido) ? `<div class="form-acoes"><button type="button" class="btn secundario pequeno" data-editar-pedido="${pedido.id}">Editar</button></div>` : ""}
+        ${blocoAcoesSolicitante(pedido, rota)}
       `}
     </article>
   `;
@@ -1722,6 +1767,36 @@ function ligarEventosDaAba() {
       await DB.editarPedido(form.dataset.pedidoId, { ...dados, solicitante: perfil.nome, setor: perfil.setor, camposEspecificos: camposEspecificosDo(dados) });
       toast("Solicitação alterada.");
       estado.editandoPedido = null;
+      renderConteudo();
+    } catch (e) {
+      toast(e.message);
+    }
+  });
+
+  main.querySelectorAll("[data-abrir-cancelamento]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      estado.cancelandoPedido = btn.dataset.abrirCancelamento;
+      renderConteudo();
+    });
+  });
+
+  main.querySelector("[data-fechar-cancelamento]")?.addEventListener("click", () => {
+    estado.cancelandoPedido = null;
+    renderConteudo();
+  });
+
+  main.querySelector('form[data-form="cancelar-pedido-solicitante"]')?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const form = ev.target;
+    const justificativa = new FormData(form).get("justificativa").trim();
+    if (!justificativa) {
+      toast("Informe a justificativa do cancelamento.");
+      return;
+    }
+    try {
+      await DB.cancelarPedidoSolicitante(form.dataset.pedidoId, obterPerfilSolicitante().nome, justificativa);
+      toast("Pedido cancelado.");
+      estado.cancelandoPedido = null;
       renderConteudo();
     } catch (e) {
       toast(e.message);
