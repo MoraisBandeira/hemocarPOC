@@ -166,6 +166,7 @@ const estado = {
   editandoRota: null, // id da rota com o formulário de edição aberto, ou null
   editandoPedido: null, // id do pedido (Meus Pedidos) com o formulário de edição aberto, ou null
   cancelandoPedido: null, // id do pedido (Meus Pedidos) com o formulário de cancelamento aberto, ou null
+  recusandoAgrupamento: null, // id do pedido (Meus Pedidos) com a justificativa de não juntar aberta, ou null
   registrandoRota: null, // { rotaId, acao: 'saida' | 'chegada' } — formulário da Portaria aberto, ou null
   notificacoesAbertas: false,
   menuPerfilAberto: false,
@@ -539,14 +540,29 @@ function rotuloStatusRota(rota) {
 /** Pergunta ao solicitante se pode juntar o pedido a outra solicitação (só local, data e hora; sem identificar quem). */
 function blocoAgrupamentoSolicitante(pedido) {
   const ag = pedido.agrupamento;
-  if (!ag) return "";
+  // união feita pelo transporte sem pergunta: o solicitante não é avisado
+  if (!ag || ag.estado === "unido") return "";
   const caixa = (conteudo) => `<div class="agrupamento-box" style="margin-top:10px;padding:10px;border:1px solid #ddd;border-radius:6px;">${conteudo}</div>`;
 
   if (ag.estado === "aceito") {
     return caixa(`<strong>✓ Você aceitou juntar esta solicitação a outra do mesmo local/região e horário.</strong>`);
   }
   if (ag.estado === "recusado") {
-    return caixa(`<strong>Você não quis juntar esta solicitação.</strong>`);
+    return caixa(`<strong>Você não quis juntar esta solicitação.</strong>${ag.justificativa ? `<p class="card-obs">Justificativa: ${escapeHtml(ag.justificativa)}</p>` : ""}`);
+  }
+  if (estado.recusandoAgrupamento === pedido.id) {
+    return caixa(`
+      <strong>Por que não quer juntar sua solicitação?</strong>
+      <form data-form="recusar-agrupamento" data-pedido-id="${pedido.id}" style="margin-top:8px;">
+        <div class="campo full">
+          <textarea name="justificativa" required placeholder="Ex.: Preciso sair antes do horário sugerido"></textarea>
+        </div>
+        <div class="form-acoes" style="gap:8px;">
+          <button type="submit" class="btn perigo pequeno">Confirmar</button>
+          <button type="button" class="btn secundario pequeno" data-fechar-recusa-agrupamento>Voltar</button>
+        </div>
+      </form>
+    `);
   }
 
   const lista = ag.coincidencias
@@ -568,17 +584,18 @@ function linhaAgrupamentoTransporte(pedido) {
   const ag = pedido.agrupamento;
   if (!ag) return "";
   if (ag.estado === "aguardando") return `<p class="card-obs">⏳ Aguardando resposta do solicitante para juntar com outra solicitação do mesmo local/região e horário.</p>`;
+  if (ag.estado === "unido") return `<p class="card-obs">🔗 Unido pela equipe de transporte a outra solicitação de mesmo local/horário (solicitante não notificado).</p>`;
   if (ag.estado === "aceito") return `<p class="card-obs">🔗 Solicitante aceitou juntar com outra solicitação do mesmo local/região e horário.</p>`;
-  return `<p class="card-obs">🔗 Solicitante não quis juntar.</p>`;
+  return `<p class="card-obs">🔗 Solicitante não quis juntar${ag.justificativa ? `: ${escapeHtml(ag.justificativa)}` : "."}</p>`;
 }
 
 /**
- * Espelha a regra do servidor (pedidoEditavel): o solicitante só altera o pedido
- * enquanto a diretoria não aprovou e o transporte não aceitou.
+ * Espelha a regra do servidor (pedidoEditavel): o solicitante altera o pedido até a
+ * portaria registrar a saída da rota em que ele está.
  */
-function podeEditarPedido(pedido) {
-  if (pedido.status === "aguardando_diretoria") return true;
-  return pedido.status === "pendente" && !pedido.requerAprovacaoDiretoria;
+function podeEditarPedido(pedido, rota) {
+  if (rota && rota.status !== "programada") return false;
+  return ["pendente", "aguardando_diretoria", "aceito", "roteirizado"].includes(pedido.status);
 }
 
 /**
@@ -612,7 +629,7 @@ function formularioCancelarPedido(pedido) {
 
 /** Botões Editar e Cancelar pedido do card do solicitante, conforme o status do pedido. */
 function blocoAcoesSolicitante(pedido, rota) {
-  const editar = podeEditarPedido(pedido)
+  const editar = podeEditarPedido(pedido, rota)
     ? `<button type="button" class="btn secundario pequeno" data-editar-pedido="${pedido.id}">Editar</button>`
     : "";
   const cancelar = podeCancelarPedidoSolicitante(pedido, rota)
@@ -650,7 +667,7 @@ function formularioEditarPedido(pedido) {
   return `
     <div class="analise-form">
       <h4>Editar solicitação</h4>
-      <p class="card-obs">Enquanto a diretoria não aprovar ou o transporte não aceitar, você pode alterar os dados. Depois disso, não é mais possível.</p>
+      <p class="card-obs">Você pode alterar os dados até a portaria registrar a saída do veículo. Se a alteração fizer esta solicitação deixar de combinar com os outros pedidos da rota, ela volta para a equipe de transporte.</p>
       <form data-form="editar-pedido" data-pedido-id="${pedido.id}">
         <div class="form-grid">
           <div class="campo">
@@ -1174,6 +1191,7 @@ function cardPedidoAnalise(pedido, infoGrupo) {
       ${linhaAgrupamentoTransporte(pedido)}
       ${!analisandoEste ? `
         <div class="card-acoes">
+          ${pedido.podeSugerirUniao ? `<button class="btn secundario pequeno" data-sugerir-agrupamento="${pedido.id}">Sugerir juntar com outra solicitação</button>` : ""}
           <button class="btn secundario pequeno" data-iniciar-analise="cancelar" data-pedido-id="${pedido.id}">Cancelar pedido</button>
         </div>
       ` : ""}
@@ -1722,15 +1740,33 @@ function ligarEventosDaAba() {
   });
 
   main.querySelectorAll("[data-agrupar-nao]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      try {
-        await DB.responderAgrupamento(btn.dataset.agruparNao, "nao");
-        toast("Resposta registrada: você não quis juntar a solicitação.");
-        renderConteudo();
-      } catch (e) {
-        toast(e.message);
-      }
+    btn.addEventListener("click", () => {
+      estado.recusandoAgrupamento = btn.dataset.agruparNao;
+      renderConteudo();
     });
+  });
+
+  main.querySelector("[data-fechar-recusa-agrupamento]")?.addEventListener("click", () => {
+    estado.recusandoAgrupamento = null;
+    renderConteudo();
+  });
+
+  main.querySelector('form[data-form="recusar-agrupamento"]')?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const form = ev.target;
+    const justificativa = new FormData(form).get("justificativa").trim();
+    if (!justificativa) {
+      toast("Informe a justificativa.");
+      return;
+    }
+    try {
+      await DB.responderAgrupamento(form.dataset.pedidoId, "nao", justificativa);
+      toast("Resposta registrada: você não quis juntar a solicitação.");
+      estado.recusandoAgrupamento = null;
+      renderConteudo();
+    } catch (e) {
+      toast(e.message);
+    }
   });
 
   main.querySelectorAll("[data-editar-pedido]").forEach((btn) => {
@@ -1826,6 +1862,18 @@ function ligarEventosDaAba() {
   main.querySelector("#linkEditarPerfil")?.addEventListener("click", () => {
     estado.menuPerfilAberto = true;
     renderChipPerfil();
+  });
+
+  main.querySelectorAll("[data-sugerir-agrupamento]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      try {
+        await DB.sugerirAgrupamento(btn.dataset.sugerirAgrupamento);
+        toast("Sugestão enviada ao solicitante.");
+        renderConteudo();
+      } catch (e) {
+        toast(e.message);
+      }
+    });
   });
 
   main.querySelectorAll("[data-iniciar-analise]").forEach((btn) => {

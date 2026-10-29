@@ -94,8 +94,11 @@ const DB = (() => {
   function editarPedido(pedidoId, dados) {
     return requisitar(`/api/pedidos/${pedidoId}/editar`, { method: "POST", body: JSON.stringify(dados) });
   }
-  function responderAgrupamento(pedidoId, resposta) {
-    return requisitar(`/api/pedidos/${pedidoId}/agrupamento`, { method: "POST", body: JSON.stringify({ resposta }) });
+  function sugerirAgrupamento(pedidoId) {
+    return requisitar(`/api/pedidos/${pedidoId}/sugerir-agrupamento`, { method: "POST", body: JSON.stringify({}) });
+  }
+  function responderAgrupamento(pedidoId, resposta, justificativa) {
+    return requisitar(`/api/pedidos/${pedidoId}/agrupamento`, { method: "POST", body: JSON.stringify({ resposta, justificativa }) });
   }
   function registrarSaidaRota(rotaId, dados) {
     return requisitar(`/api/rotas/${rotaId}/saida`, { method: "POST", body: JSON.stringify(dados) });
@@ -160,6 +163,7 @@ const DB = (() => {
     cancelarPedidoSolicitante,
     aprovarPorDiretoria,
     aceitarSolicitacao,
+    sugerirAgrupamento,
     responderAgrupamento,
     registrarSaidaRota,
     registrarChegadaRota,

@@ -80,14 +80,14 @@ test.describe("Solicitante (interface)", () => {
     await expect(page.locator('form[data-form="editar-pedido"] #volume_amostra')).toHaveValue("12");
   });
 
-  test("não mostra Editar depois que a diretoria aprovou", async ({ page, request }) => {
+  test("mostra Editar depois que a diretoria aprovou", async ({ page, request }) => {
     const pedido = await criarPedidoApi(request, { solicitante: "Maria Souza", tipo: "materiais", dataDesejada: paraDatetimeLocal(emHoras(5)) });
     await request.post(`/api/pedidos/${pedido.id}/aprovar-diretoria`);
     await abrirComoPerfil(page, "solicitante");
     await irParaAba(page, "Meus Pedidos");
 
     await expect(page.locator("#conteudo")).toContainText("Pendente");
-    await expect(page.getByRole("button", { name: "Editar" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Editar" })).toHaveCount(1);
   });
 
   test("Meus Pedidos identifica o solicitante logado", async ({ page }) => {

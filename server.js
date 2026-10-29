@@ -52,6 +52,8 @@ const HOSPITAIS_EXEMPLO = [
 
 // Tipos de solicitação que podem ser aceitos como "Transporte Outros" (demais são sempre Hemoce)
 const PODE_TRANSPORTE_OUTROS = ["pessoal_administrativo", "pessoal_tecnico"];
+// Todo pedido pode ser unido pelo transporte, mas só estes tipos recebem a pergunta ao solicitante
+const TIPOS_COM_PERGUNTA_UNIAO = ["equipamentos", "pessoal_administrativo", "pessoal_tecnico"];
 
 function estadoPadrao() {
   return {
@@ -249,7 +251,6 @@ function criarPedido(dados) {
     atualizadoEm: agoraISO(),
   };
   estado.pedidos.push(pedido);
-  avaliarAgrupamento(pedido);
 
   adicionarNotificacao({
     tipo: "novo_pedido",
@@ -269,8 +270,8 @@ function atualizarPedido(id, patch) {
   return pedido;
 }
 
-// ---- Sugestão de agrupamento: avisa o solicitante quando outro pedido vai ao mesmo destino
-// (ou à mesma região) com horário próximo, e deixa ele decidir se aceita juntar ----
+// ---- Sugestão de agrupamento: a equipe de transporte, e só ela, pergunta ao solicitante se
+// pode juntar o pedido a outro com mesmo destino (ou região) e horário próximo ----
 const JANELA_AGRUPAMENTO_MS = 1 * 60 * 60 * 1000; // mesma janela usada na tela de análise
 // só pedidos que ainda não entraram numa rota podem ser juntados
 const STATUS_AGRUPAVEIS = ["pendente", "aguardando_diretoria", "aceito"];
@@ -287,18 +288,25 @@ function dataEHoraLegivel(dataDesejada) {
   return { data: `${diaMes}/${mes}/${ano}`, hora: (horario || "").slice(0, 5) };
 }
 
-/** Outros pedidos ainda não roteirizados, no mesmo destino ou na mesma região, com horário a até 1h. */
+/** Outros pedidos ainda não roteirizados, no mesmo destino ou região, com horário a até 1h. */
+function encontrarPedidosProximos(pedido) {
+  return estado.pedidos.filter((outro) => outro.id !== pedido.id && STATUS_AGRUPAVEIS.includes(outro.status) && combinaParaUniao(pedido, outro));
+}
+
+/** Dois pedidos combinam para união: mesmo destino ou mesma região, com horário a até 1h. */
+function combinaParaUniao(a, b) {
+  const regional = regionalDoLocal(a.destino);
+  const mesmoDestino = a.destino === b.destino;
+  const mesmaRegiao = Boolean(regional) && regionalDoLocal(b.destino) === regional;
+  const diferencaMs = Math.abs(new Date(a.dataDesejada).getTime() - new Date(b.dataDesejada).getTime());
+  return (mesmoDestino || mesmaRegiao) && diferencaMs <= JANELA_AGRUPAMENTO_MS;
+}
+
+/** Local, data e hora dos pedidos próximos, sem repetir o mesmo horário. */
 function encontrarCoincidencias(pedido) {
-  const regional = regionalDoLocal(pedido.destino);
-  const horario = new Date(pedido.dataDesejada).getTime();
   const vistos = new Set();
   const coincidencias = [];
-  estado.pedidos.forEach((outro) => {
-    if (outro.id === pedido.id || !STATUS_AGRUPAVEIS.includes(outro.status)) return;
-    const mesmoDestino = outro.destino === pedido.destino;
-    const mesmaRegiao = Boolean(regional) && regionalDoLocal(outro.destino) === regional;
-    if (!mesmoDestino && !mesmaRegiao) return;
-    if (Math.abs(new Date(outro.dataDesejada).getTime() - horario) > JANELA_AGRUPAMENTO_MS) return;
+  encontrarPedidosProximos(pedido).forEach((outro) => {
     // mostra só local, data e hora: nunca quem fez a outra solicitação
     const { data, hora } = dataEHoraLegivel(outro.dataDesejada);
     const chave = `${outro.destino}|${data}|${hora}`;
@@ -309,22 +317,59 @@ function encontrarCoincidencias(pedido) {
   return coincidencias;
 }
 
-/** Procura outros pedidos próximos ao pedido e, se achar, pergunta ao solicitante se pode juntar. */
-function avaliarAgrupamento(pedido) {
-  pedido.agrupamento = null;
-  const coincidencias = encontrarCoincidencias(pedido);
-  if (!coincidencias.length) return;
+/** Grupo de união de um pedido (ele e os próximos), do mais antigo para o mais recente. */
+function grupoDeUniao(pedido) {
+  // a ordem de estado.pedidos é a ordem de criação: o primeiro é o mais antigo
+  return [pedido, ...encontrarPedidosProximos(pedido)].sort((a, b) => estado.pedidos.indexOf(a) - estado.pedidos.indexOf(b));
+}
 
-  pedido.agrupamento = { estado: "aguardando", coincidencias, respondidoEm: null };
-  const descricoes = coincidencias.map((c) => `${c.local} em ${c.data} às ${c.hora}`).join("; ");
-  adicionarNotificacao({
-    tipo: "agrupamento_sugerido",
-    titulo: "Pode juntar sua solicitação?",
-    mensagem: `Há outra solicitação de transporte para: ${descricoes}. Você aceita juntar a sua a ela?`,
-    publico: "solicitante",
-    solicitanteNome: pedido.solicitante,
-    pedidoId: pedido.id,
+/** Há união a sugerir: um pedido sem sugestão anterior e algum outro do grupo ainda não consultado. */
+function temUniaoParaSugerir(pedido) {
+  if (!STATUS_AGRUPAVEIS.includes(pedido.status) || pedido.agrupamento) return false;
+  return grupoDeUniao(pedido).slice(1).some((p) => !p.agrupamento);
+}
+
+/**
+ * Equipe de transporte sugere a união de um grupo de pedidos próximos. A solicitação
+ * mais antiga do grupo tem preferência: ela não é notificada, e só as demais recebem
+ * a pergunta de juntar a sua solicitação à mais antiga.
+ */
+function sugerirAgrupamento(pedidoId) {
+  const pedido = estado.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) throw new ErroApi(404, "Pedido não encontrado.");
+  if (!STATUS_AGRUPAVEIS.includes(pedido.status)) {
+    throw new ErroApi(409, "Só é possível sugerir agrupamento para pedidos ainda não roteirizados.");
+  }
+  if (pedido.agrupamento) {
+    throw new ErroApi(409, "Este pedido já foi unido ou já tem uma sugestão de união.");
+  }
+  if (!encontrarPedidosProximos(pedido).length) throw new ErroApi(409, "Não há outro pedido próximo para juntar.");
+
+  const grupo = grupoDeUniao(pedido);
+  const maisAntigo = grupo[0];
+  const aNotificar = grupo.slice(1).filter((p) => !p.agrupamento);
+  if (!aNotificar.length) throw new ErroApi(409, "Não há outra solicitação próxima a unir à mais antiga.");
+
+  const { data, hora } = dataEHoraLegivel(maisAntigo.dataDesejada);
+  const coincidencias = [{ local: maisAntigo.destino, data, hora }];
+  aNotificar.forEach((outro) => {
+    outro.atualizadoEm = agoraISO();
+    // tipos sem pergunta ao solicitante ficam unidos direto, sem notificação
+    if (!TIPOS_COM_PERGUNTA_UNIAO.includes(outro.tipo)) {
+      outro.agrupamento = { estado: "unido", coincidencias, respondidoEm: agoraISO(), justificativa: null };
+      return;
+    }
+    outro.agrupamento = { estado: "aguardando", coincidencias, respondidoEm: null };
+    adicionarNotificacao({
+      tipo: "agrupamento_sugerido",
+      titulo: "Pode juntar sua solicitação?",
+      mensagem: `A equipe de transporte sugere juntar sua solicitação à outra solicitação para ${maisAntigo.destino} em ${data} às ${hora}. Você aceita?`,
+      publico: "solicitante",
+      solicitanteNome: outro.solicitante,
+      pedidoId: outro.id,
+    });
   });
+  return pedido;
 }
 
 /**
@@ -333,9 +378,13 @@ function avaliarAgrupamento(pedido) {
  * pendente sem exigência de diretoria (pendente com exigência significa que a
  * diretoria já aprovou).
  */
+// Status em que o solicitante ainda pode alterar o pedido (até a portaria registrar a saída da rota)
+const STATUS_EDITAVEL_SOLICITANTE = ["pendente", "aguardando_diretoria", "aceito", "roteirizado"];
+
 function pedidoEditavel(pedido) {
-  if (pedido.status === "aguardando_diretoria") return true;
-  return pedido.status === "pendente" && !pedido.requerAprovacaoDiretoria;
+  const rota = pedido.rotaId ? estado.rotas.find((r) => r.id === pedido.rotaId) : null;
+  if (rota && rota.status !== "programada") return false;
+  return STATUS_EDITAVEL_SOLICITANTE.includes(pedido.status);
 }
 
 /** Solicitante altera os dados do próprio pedido (enquanto ainda é editável). */
@@ -346,13 +395,22 @@ function editarPedido(pedidoId, dados) {
     throw new ErroApi(403, "Só quem fez o pedido pode alterá-lo.");
   }
   if (!pedidoEditavel(pedido)) {
-    throw new ErroApi(409, "Este pedido não pode mais ser alterado: já foi aprovado pela diretoria ou aceito pela equipe de transporte.");
+    throw new ErroApi(409, "Este pedido não pode mais ser alterado: o veículo já saiu com ele (saída registrada na portaria).");
   }
   if (!dados.origem || !dados.destino || !dados.dataDesejada || !dados.tipo) {
     throw new ErroApi(400, "Preencha origem, destino, data desejada e tipo.");
   }
 
-  const necessitaDiretoria = requerAprovacaoDiretoria(dados.tipo, dados.dataDesejada);
+  // quem já passou pela diretoria (ou passa agora, pela nova data/tipo) volta para aprovação ao ser alterado
+  const necessitaDiretoria = requerAprovacaoDiretoria(dados.tipo, dados.dataDesejada) || pedido.requerAprovacaoDiretoria;
+  // rota de pedido único: a edição invalida o planejamento dela, então o pedido sai.
+  // rota com outros pedidos: o pedido sai só se a alteração contraria o motivo da união.
+  const rota = pedido.rotaId ? estado.rotas.find((r) => r.id === pedido.rotaId) : null;
+  const editado = { ...pedido, destino: dados.destino, dataDesejada: dados.dataDesejada };
+  const outrosDaRota = rota ? estado.pedidos.filter((p) => rota.pedidoIds.includes(p.id) && p.id !== pedido.id) : [];
+  const saiDaRota = Boolean(rota) && (outrosDaRota.length === 0 || outrosDaRota.some((outro) => !combinaParaUniao(editado, outro)));
+  const permaneceNaRota = Boolean(rota) && !saiDaRota;
+
   Object.assign(pedido, {
     setor: dados.setor ?? pedido.setor,
     origem: dados.origem,
@@ -362,12 +420,35 @@ function editarPedido(pedidoId, dados) {
     prioridade: dados.prioridade || "normal",
     observacoes: dados.observacoes || "",
     camposEspecificos: sanitizarCamposEspecificos(dados.camposEspecificos),
-    status: necessitaDiretoria ? "aguardando_diretoria" : "pendente",
-    requerAprovacaoDiretoria: necessitaDiretoria,
+    // dentro da rota, o pedido segue roteirizado; fora dela, volta para a equipe de transporte
+    status: permaneceNaRota ? "roteirizado" : necessitaDiretoria ? "aguardando_diretoria" : "pendente",
+    requerAprovacaoDiretoria: permaneceNaRota ? pedido.requerAprovacaoDiretoria : necessitaDiretoria,
     atualizadoEm: agoraISO(),
   });
-  // horário, destino ou tipo mudaram: a sugestão de agrupamento precisa ser recalculada
-  avaliarAgrupamento(pedido);
+  // horário, destino ou tipo mudaram: a sugestão de agrupamento anterior deixa de valer
+  pedido.agrupamento = null;
+
+  if (saiDaRota) {
+    const destinoAposAlteracao = pedido.status === "aguardando_diretoria" ? "aprovação da diretoria" : "análise da equipe de transporte";
+    rota.pedidoIds = rota.pedidoIds.filter((id) => id !== pedido.id);
+    if (rota.pedidoIds.length === 0) estado.rotas.splice(estado.rotas.indexOf(rota), 1);
+    pedido.rotaId = null;
+    adicionarNotificacao({
+      tipo: "pedido_alterado",
+      titulo: "Solicitação saiu da rota",
+      mensagem: `${pedido.solicitante} alterou a solicitação e ela saiu da rota, pois não combina mais com os outros pedidos dela. Voltou para ${destinoAposAlteracao}.`,
+      publico: "transporte",
+      pedidoId: pedido.id,
+    });
+    adicionarNotificacao({
+      tipo: "pedido_alterado",
+      titulo: "Solicitação saiu da rota",
+      mensagem: `Sua alteração fez a solicitação sair da rota (${pedido.origem} → ${pedido.destino}). Ela volta para ${destinoAposAlteracao}.`,
+      publico: "solicitante",
+      solicitanteNome: pedido.solicitante,
+      pedidoId: pedido.id,
+    });
+  }
 
   const { data, hora } = dataEHoraLegivel(pedido.dataDesejada);
   adicionarNotificacao({
@@ -382,16 +463,20 @@ function editarPedido(pedidoId, dados) {
 }
 
 /** Solicitante responde se aceita juntar o pedido a outro transporte. */
-function responderAgrupamento(pedidoId, { resposta }) {
+function responderAgrupamento(pedidoId, dados) {
   const pedido = estado.pedidos.find((p) => p.id === pedidoId);
   if (!pedido) throw new ErroApi(404, "Pedido não encontrado.");
   if (!pedido.agrupamento || pedido.agrupamento.estado !== "aguardando") {
     throw new ErroApi(409, "Não há sugestão de agrupamento aguardando resposta para este pedido.");
   }
+  const { resposta } = dados;
   if (!["sim", "nao"].includes(resposta)) throw new ErroApi(400, "Resposta inválida. Use 'sim' ou 'nao'.");
+  const justificativa = (dados.justificativa || "").trim();
+  if (resposta === "nao" && !justificativa) throw new ErroApi(400, "Informe a justificativa para não juntar a solicitação.");
   pedido.agrupamento = {
     ...pedido.agrupamento,
     estado: resposta === "sim" ? "aceito" : "recusado",
+    justificativa: resposta === "nao" ? justificativa : null,
     respondidoEm: agoraISO(),
   };
   pedido.atualizadoEm = agoraISO();
@@ -491,6 +576,7 @@ function estadoParaEnvio() {
   marcarPedidosExpirados(); // Atualiza status de pedidos expirados antes de enviar
   return {
     ...estado,
+    pedidos: estado.pedidos.map((pedido) => ({ ...pedido, podeSugerirUniao: temUniaoParaSugerir(pedido) })),
     motoristas: anotarDisponibilidade(estado.motoristas, "motoristaId"),
     veiculos: anotarDisponibilidade(estado.veiculos, "veiculoId"),
   };
@@ -867,6 +953,11 @@ async function tratarApi(req, res, url) {
     if (partes.length === 4 && partes[3] === "editar" && metodo === "POST") {
       const dados = await lerCorpoJson(req);
       const pedido = editarPedido(partes[2], dados);
+      persistirETransmitir();
+      return responderJson(res, 200, pedido);
+    }
+    if (partes.length === 4 && partes[3] === "sugerir-agrupamento" && metodo === "POST") {
+      const pedido = sugerirAgrupamento(partes[2]);
       persistirETransmitir();
       return responderJson(res, 200, pedido);
     }
