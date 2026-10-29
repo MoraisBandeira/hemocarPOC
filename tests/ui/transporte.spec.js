@@ -59,9 +59,9 @@ test.describe("Equipe de Transporte (interface)", () => {
 
     await page.locator(`[data-iniciar-analise="rejeitar"][data-pedido-id="${pedido.id}"]`).click();
     await page.fill(`#motivo-${pedido.id}`, "Sem veículo disponível no horário");
-    await page.getByRole("button", { name: "Confirmar rejeição" }).click();
+    await page.getByRole("button", { name: "Confirmar recusa" }).click();
 
-    await expect(page.locator("#toast")).toHaveText("Pedido rejeitado.");
+    await expect(page.locator("#toast")).toHaveText("Pedido recusado.");
     await expect.poll(async () => {
       const { pedidos } = await lerEstado(request);
       return pedidos.find((p) => p.id === pedido.id).status;

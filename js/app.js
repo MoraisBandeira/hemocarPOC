@@ -766,18 +766,18 @@ function viewAceitarSolicitacoes() {
   `;
 }
 
-/** Formulário para informar o motivo da rejeição (usado na aba Aceitar Solicitações). */
+/** Formulário para informar o motivo da recusa (usado na aba Aceitar Solicitações). */
 function formularioRejeitarPedido(pedido) {
   return `
     <div class="analise-form">
-      <h4>Rejeitar pedido</h4>
+      <h4>Recusar pedido</h4>
       <form data-form="rejeitar" data-pedido-id="${pedido.id}">
         <div class="campo full">
-          <label for="motivo-${pedido.id}">Motivo da rejeição</label>
+          <label for="motivo-${pedido.id}">Motivo da recusa</label>
           <textarea id="motivo-${pedido.id}" name="motivo" required placeholder="Ex.: Sem disponibilidade de veículo para o horário solicitado"></textarea>
         </div>
         <div class="form-acoes">
-          <button type="submit" class="btn perigo">Confirmar rejeição</button>
+          <button type="submit" class="btn perigo">Confirmar recusa</button>
           <button type="button" class="btn secundario" data-cancelar-analise>Cancelar</button>
         </div>
       </form>
@@ -809,7 +809,7 @@ function cardAceitarSolicitacao(pedido) {
         <div class="form-acoes" style="gap:8px;">
           <button type="button" class="btn" data-aceitar-hemoce="${pedido.id}">🏥 Transporte Hemoce</button>
           ${PODE_TRANSPORTE_OUTROS.includes(pedido.tipo) ? `<button type="button" class="btn secundario" data-aceitar-outros="${pedido.id}">🚗 Transporte Outros</button>` : ""}
-          <button type="button" class="btn perigo" data-iniciar-analise="rejeitar" data-pedido-id="${pedido.id}">✕ Rejeitar</button>
+          <button type="button" class="btn perigo" data-iniciar-analise="rejeitar" data-pedido-id="${pedido.id}">✕ Recusar</button>
         </div>
       `}
     </article>
@@ -1916,12 +1916,12 @@ function ligarEventosDaAba() {
     const pedidoId = form.dataset.pedidoId;
     const { motivo } = Object.fromEntries(new FormData(form).entries());
     if (!motivo?.trim()) {
-      toast("Informe o motivo da rejeição.");
+      toast("Informe o motivo da recusa.");
       return;
     }
     try {
       await DB.rejeitarPedido(pedidoId, motivo.trim());
-      toast("Pedido rejeitado.");
+      toast("Pedido recusado.");
       estado.analisando = null;
       renderConteudo();
     } catch (e) {

@@ -62,11 +62,11 @@ test.describe("Fluxo da Equipe de Transporte", () => {
     await abrirComoPerfil(page, "transporte");
     await irParaAba(page, "Aceitar Solicitações");
 
-    await test.step("abre a rejeição da solicitação e informa o motivo", async () => {
+    await test.step("abre a recusa da solicitação e informa o motivo", async () => {
       await page.locator(`[data-iniciar-analise="rejeitar"][data-pedido-id="${pedido.id}"]`).click();
       await page.fill(`#motivo-${pedido.id}`, "Sem motorista disponível");
-      await page.getByRole("button", { name: "Confirmar rejeição" }).click();
-      await expect(page.locator("#toast")).toHaveText("Pedido rejeitado.");
+      await page.getByRole("button", { name: "Confirmar recusa" }).click();
+      await expect(page.locator("#toast")).toHaveText("Pedido recusado.");
     });
 
     await test.step("a solicitação sai da fila e o contador de rejeitados aumenta", async () => {
