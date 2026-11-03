@@ -5,6 +5,15 @@
  * (KM + horário) do veículo, o que conclui a rota e libera motorista/veículo.
  */
 
+/**
+ * Pedidos visíveis no perfil atual. Cada pedido tem um responsável (transporte ou distribuição),
+ * definido pelo servidor a partir do tipo e do horário pedido. Os demais perfis veem todos.
+ */
+function pedidosDoPerfil(pedidos) {
+  if (estado.perfil !== "transporte" && estado.perfil !== "distribuicao") return pedidos;
+  return pedidos.filter((p) => p.responsavel === estado.perfil);
+}
+
 const TABS_POR_PERFIL = {
   solicitante: [
     { id: "novoPedido", label: "Novo Pedido" },
@@ -764,7 +773,7 @@ function cardPedidoSolicitante(pedido, rotas, motoristas, veiculos) {
 // ---------- View: Aceitar Solicitações (Transporte) ----------
 
 function viewAceitarSolicitacoes() {
-  const pedidos = DB.listarPedidos();
+  const pedidos = pedidosDoPerfil(DB.listarPedidos());
   // Filtra pedidos que ainda não foram aceitos
   const pendentes = pedidos.filter((p) => p.status === "pendente");
 
@@ -994,9 +1003,11 @@ function painelSugestoesAgrupamento(gruposDestino, gruposRegiao) {
 }
 
 function viewAnalise() {
-  const pedidos = DB.listarPedidos();
-  // Mostra apenas pedidos que foram aceitos e aguardam análise
-  const pendentes = pedidos.filter((p) => p.status === "aceito");
+  const pedidos = pedidosDoPerfil(DB.listarPedidos());
+  // Mostra os pedidos aceitos pelo transporte e aguardando análise. A distribuição
+  // não depende do aceite do transporte: também analisa os pendentes do seu escopo.
+  const statusAnalisaveis = estado.perfil === "distribuicao" ? ["aceito", "pendente"] : ["aceito"];
+  const pendentes = pedidos.filter((p) => statusAnalisaveis.includes(p.status));
 
   // remove da seleção pedidos que não estão mais pendentes (ex.: outra pessoa já analisou)
   const idsPendentes = new Set(pendentes.map((p) => p.id));
@@ -1241,8 +1252,10 @@ function formularioEditarRota(rota, motoristas, veiculos) {
 }
 
 function viewRotas() {
-  const rotas = DB.listarRotas();
-  const pedidos = DB.listarPedidos();
+  const pedidos = pedidosDoPerfil(DB.listarPedidos());
+  // o perfil vê a rota se houver nela algum pedido do seu escopo
+  const idsVisiveis = new Set(pedidos.map((p) => p.id));
+  const rotas = DB.listarRotas().filter((r) => r.pedidoIds.some((id) => idsVisiveis.has(id)));
   const motoristas = DB.listarMotoristas();
   const veiculos = DB.listarVeiculos();
 
@@ -1581,6 +1594,45 @@ function viewAnaliseRetorno() {
 
 // ---------- View: Cadastros (Transporte) ----------
 
+/** Feriados em que a operação segue o horário de fim de semana. Data vem no formato YYYY-MM-DD. */
+function secaoFeriados() {
+  const feriados = DB.listarFeriados();
+  const linhas = feriados.length
+    ? feriados.map((f) => `
+        <tr>
+          <td>${escapeHtml(f.data.split("-").reverse().join("/"))}</td>
+          <td>${escapeHtml(f.descricao)}</td>
+          <td><button class="btn secundario pequeno" data-remover-feriado="${f.id}">Remover</button></td>
+        </tr>
+      `).join("")
+    : `<tr><td colspan="3">Nenhum feriado cadastrado.</td></tr>`;
+
+  return `
+    <section class="painel" style="margin-top:16px;">
+      <h2>Feriados</h2>
+      <div style="overflow-x:auto;">
+        <table class="tabela-simples">
+          <thead><tr><th>Data</th><th>Descrição</th><th></th></tr></thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>
+      <form id="formFeriado" class="form-grid" style="margin-top:16px;">
+        <div class="campo">
+          <label for="dataFeriado">Data</label>
+          <input id="dataFeriado" type="date" name="data" required />
+        </div>
+        <div class="campo">
+          <label for="descricaoFeriado">Descrição</label>
+          <input id="descricaoFeriado" name="descricao" required placeholder="Ex.: Dia do Trabalhador" />
+        </div>
+        <div class="campo full form-acoes" style="margin-top:0;">
+          <button type="submit" class="btn pequeno">Adicionar feriado</button>
+        </div>
+      </form>
+    </section>
+  `;
+}
+
 function viewCadastros() {
   const motoristas = DB.listarMotoristas();
   const veiculos = DB.listarVeiculos();
@@ -1710,6 +1762,7 @@ function viewCadastros() {
         <p class="card-obs" style="margin-top:10px;">A regional é usada nas sugestões de agrupamento de rota (aba "Análise de Pedidos") como uma zona mais ampla que a cidade — hospitais de cidades diferentes na mesma regional entram na mesma sugestão.</p>
       </section>
     </div>
+    ${estado.perfil === "transporte" ? secaoFeriados() : ""}
   `;
 }
 
@@ -2111,6 +2164,26 @@ function ligarEventosDaAba() {
     }
   });
 
+  main.querySelector("#formFeriado")?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const dados = Object.fromEntries(new FormData(ev.target).entries());
+    if (!dados.data || !dados.descricao?.trim()) return;
+    try {
+      await DB.adicionarFeriado(dados);
+      toast("Feriado cadastrado.");
+      renderConteudo();
+    } catch (e) {
+      toast(e.message);
+    }
+  });
+
+  main.querySelectorAll("[data-remover-feriado]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await DB.removerFeriado(btn.dataset.removerFeriado);
+      renderConteudo();
+    });
+  });
+
   main.querySelectorAll("[data-remover-hospital]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       await DB.removerHospital(btn.dataset.removerHospital);
@@ -2236,7 +2309,8 @@ function renderChipPerfil() {
  */
 function notificacoesDoPerfilAtual(lista) {
   if (estado.perfil === "transporte" || estado.perfil === "distribuicao") {
-    return lista.filter((n) => n.publico === "transporte");
+    const idsVisiveis = new Set(pedidosDoPerfil(DB.listarPedidos()).map((p) => p.id));
+    return lista.filter((n) => n.publico === "transporte" && (!n.pedidoId || idsVisiveis.has(n.pedidoId)));
   }
   if (estado.perfil === "solicitante") {
     const nome = (obterPerfilSolicitante().nome || "").trim().toLowerCase();

@@ -8,6 +8,7 @@
 "use strict";
 
 const http = require("http");
+const { foraDoExpediente } = require("./expediente");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -26,8 +27,13 @@ class ErroApi extends Error {
   }
 }
 
+/** Momento atual. HEMOCAR_AGORA fixa o relógio, e só os testes definem essa variável. */
+function agora() {
+  return process.env.HEMOCAR_AGORA ? new Date(process.env.HEMOCAR_AGORA) : new Date();
+}
+
 function agoraISO() {
-  return new Date().toISOString();
+  return agora().toISOString();
 }
 
 function novoId(prefixo) {
@@ -54,6 +60,13 @@ const HOSPITAIS_EXEMPLO = [
 const PODE_TRANSPORTE_OUTROS = ["pessoal_administrativo", "pessoal_tecnico"];
 // Todo pedido pode ser unido pelo transporte, mas só estes tipos recebem a pergunta ao solicitante
 const TIPOS_COM_PERGUNTA_UNIAO = ["equipamentos", "pessoal_administrativo", "pessoal_tecnico"];
+// Tipos tratados pela distribuição, e só quando o pedido é feito fora do expediente
+const TIPOS_DISTRIBUICAO = ["amostras_pre_transfusionais", "amostras_outras", "hemocomponentes", "medicamentos"];
+
+/** Pedido que a distribuição trata: tipo da área e feito fora do expediente (ver expediente.js). */
+function ehDaDistribuicao(pedido) {
+  return TIPOS_DISTRIBUICAO.includes(pedido.tipo) && foraDoExpediente(new Date(pedido.criadoEm), estado.feriados.map((f) => f.data));
+}
 
 function estadoPadrao() {
   return {
@@ -71,6 +84,7 @@ function estadoPadrao() {
     pedidos: [],
     rotas: [],
     notificacoes: [],
+    feriados: [], // { id, data: 'YYYY-MM-DD', descricao }
   };
 }
 
@@ -98,6 +112,7 @@ function carregarEstado() {
   estado.pedidos ??= [];
   estado.rotas ??= [];
   estado.notificacoes ??= [];
+  estado.feriados ??= [];
   if (estado.hospitais.length === 0) {
     estado.hospitais = HOSPITAIS_EXEMPLO.map((h) => ({ id: novoId("hos"), ...h, criadoEm: agoraISO() }));
   }
@@ -290,7 +305,7 @@ function dataEHoraLegivel(dataDesejada) {
 
 /** Outros pedidos ainda não roteirizados, no mesmo destino ou região, com horário a até 1h. */
 function encontrarPedidosProximos(pedido) {
-  return estado.pedidos.filter((outro) => outro.id !== pedido.id && STATUS_AGRUPAVEIS.includes(outro.status) && combinaParaUniao(pedido, outro));
+  return estado.pedidos.filter((outro) => outro.id !== pedido.id && STATUS_AGRUPAVEIS.includes(outro.status) && !ehDaDistribuicao(outro) && combinaParaUniao(pedido, outro));
 }
 
 /** Dois pedidos combinam para união: mesmo destino ou mesma região, com horário a até 1h. */
@@ -325,7 +340,7 @@ function grupoDeUniao(pedido) {
 
 /** Há união a sugerir: um pedido sem sugestão anterior e algum outro do grupo ainda não consultado. */
 function temUniaoParaSugerir(pedido) {
-  if (!STATUS_AGRUPAVEIS.includes(pedido.status) || pedido.agrupamento) return false;
+  if (!STATUS_AGRUPAVEIS.includes(pedido.status) || pedido.agrupamento || ehDaDistribuicao(pedido)) return false;
   return grupoDeUniao(pedido).slice(1).some((p) => !p.agrupamento);
 }
 
@@ -340,6 +355,7 @@ function sugerirAgrupamento(pedidoId) {
   if (!STATUS_AGRUPAVEIS.includes(pedido.status)) {
     throw new ErroApi(409, "Só é possível sugerir agrupamento para pedidos ainda não roteirizados.");
   }
+  if (ehDaDistribuicao(pedido)) throw new ErroApi(409, "Este pedido é tratado pela distribuição.");
   if (pedido.agrupamento) {
     throw new ErroApi(409, "Este pedido já foi unido ou já tem uma sugestão de união.");
   }
@@ -576,7 +592,11 @@ function estadoParaEnvio() {
   marcarPedidosExpirados(); // Atualiza status de pedidos expirados antes de enviar
   return {
     ...estado,
-    pedidos: estado.pedidos.map((pedido) => ({ ...pedido, podeSugerirUniao: temUniaoParaSugerir(pedido) })),
+    pedidos: estado.pedidos.map((pedido) => ({
+      ...pedido,
+      responsavel: ehDaDistribuicao(pedido) ? "distribuicao" : "transporte",
+      podeSugerirUniao: temUniaoParaSugerir(pedido),
+    })),
     motoristas: anotarDisponibilidade(estado.motoristas, "motoristaId"),
     veiculos: anotarDisponibilidade(estado.veiculos, "veiculoId"),
   };
@@ -1081,6 +1101,22 @@ async function tratarApi(req, res, url) {
     }
     if (partes.length === 3 && metodo === "DELETE") {
       estado.hospitais = estado.hospitais.filter((h) => h.id !== partes[2]);
+      persistirETransmitir();
+      return responderJson(res, 200, { ok: true });
+    }
+  }
+
+  if (partes[1] === "feriados") {
+    if (partes.length === 2 && metodo === "POST") {
+      const dados = await lerCorpoJson(req);
+      if (!dados.data || !dados.descricao || !dados.descricao.trim()) throw new ErroApi(400, "Data e descrição são obrigatórias.");
+      const feriado = { id: novoId("fer"), data: dados.data, descricao: dados.descricao.trim(), criadoEm: agoraISO() };
+      estado.feriados.push(feriado);
+      persistirETransmitir();
+      return responderJson(res, 201, feriado);
+    }
+    if (partes.length === 3 && metodo === "DELETE") {
+      estado.feriados = estado.feriados.filter((f) => f.id !== partes[2]);
       persistirETransmitir();
       return responderJson(res, 200, { ok: true });
     }

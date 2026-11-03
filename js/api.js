@@ -56,6 +56,9 @@ const DB = (() => {
   function listarVeiculos() {
     return [...estado.veiculos];
   }
+  function listarFeriados() {
+    return [...(estado.feriados || [])].sort((a, b) => a.data.localeCompare(b.data));
+  }
   function listarHospitais() {
     return [...estado.hospitais].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   }
@@ -127,6 +130,12 @@ const DB = (() => {
   function removerHospital(id) {
     return requisitar(`/api/hospitais/${id}`, { method: "DELETE" });
   }
+  function adicionarFeriado(dados) {
+    return requisitar("/api/feriados", { method: "POST", body: JSON.stringify(dados) });
+  }
+  function removerFeriado(id) {
+    return requisitar(`/api/feriados/${id}`, { method: "DELETE" });
+  }
   function marcarNotificacaoLida(id) {
     return requisitar(`/api/notificacoes/${id}/lida`, { method: "POST" });
   }
@@ -153,6 +162,9 @@ const DB = (() => {
     listarHospitais,
     adicionarHospital,
     removerHospital,
+    listarFeriados,
+    adicionarFeriado,
+    removerFeriado,
     listarPedidos,
     criarPedido,
     editarPedido,

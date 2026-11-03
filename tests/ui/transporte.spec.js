@@ -86,6 +86,25 @@ test.describe("Equipe de Transporte (interface)", () => {
     const { motoristas } = await lerEstado(request);
     expect(motoristas.some((m) => m.nome === "Ana Ribeiro")).toBe(false);
   });
+
+  test("cadastra e remove um feriado na aba Cadastros", async ({ page, request }) => {
+    await abrirComoPerfil(page, "transporte");
+    await irParaAba(page, "Cadastros");
+
+    await page.fill("#dataFeriado", "2026-11-02");
+    await page.fill("#descricaoFeriado", "Finados (teste)");
+    await page.getByRole("button", { name: "Adicionar feriado" }).click();
+
+    await expect(page.locator("#toast")).toHaveText("Feriado cadastrado.");
+    const linha = page.locator("tr", { hasText: "Finados (teste)" });
+    await expect(linha).toContainText("02/11/2026");
+
+    await linha.getByRole("button", { name: "Remover" }).click();
+
+    await expect(page.locator("tr", { hasText: "Finados (teste)" })).toHaveCount(0);
+    const { feriados } = await lerEstado(request);
+    expect(feriados).toHaveLength(0);
+  });
 });
 
 test.describe("Listagem de pedidos com campos específicos (interface)", () => {
