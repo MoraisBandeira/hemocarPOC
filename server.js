@@ -8,7 +8,7 @@
 "use strict";
 
 const http = require("http");
-const { foraDoExpediente } = require("./expediente");
+const { responsavelPelo } = require("./expediente");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -63,9 +63,9 @@ const TIPOS_COM_PERGUNTA_UNIAO = ["equipamentos", "pessoal_administrativo", "pes
 // Tipos tratados pela distribuição, e só quando o pedido é feito fora do expediente
 const TIPOS_DISTRIBUICAO = ["amostras_pre_transfusionais", "amostras_outras", "hemocomponentes", "medicamentos"];
 
-/** Pedido que a distribuição trata: tipo da área e feito fora do expediente (ver expediente.js). */
+/** Pedido que a distribuição trata agora (ver expediente.js: fora do expediente e ainda não atendido pelo transporte). */
 function ehDaDistribuicao(pedido) {
-  return TIPOS_DISTRIBUICAO.includes(pedido.tipo) && foraDoExpediente(new Date(pedido.criadoEm), estado.feriados.map((f) => f.data));
+  return responsavelPelo(pedido, agora(), estado.feriados.map((f) => f.data), TIPOS_DISTRIBUICAO) === "distribuicao";
 }
 
 function estadoPadrao() {

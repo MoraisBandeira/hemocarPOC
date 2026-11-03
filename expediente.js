@@ -1,10 +1,15 @@
 /**
- * Expediente do transporte: seg–sex das 07:00 às 17:00 (horário de Fortaleza). Fora dele,
- * aos fins de semana e nos feriados cadastrados, os pedidos de tipos da distribuição
- * são tratados pela distribuição.
+ * Expediente do transporte e divisão com a distribuição (horário de Fortaleza).
+ *
+ * - Pedido de tipo da distribuição feito fora do expediente (seg–sex 17:01 às 06:59, fins de
+ *   semana e feriados cadastrados o dia todo) fica com a distribuição.
+ * - Enquanto a distribuição não o roteiriza, esse pedido é repassado ao transporte no
+ *   expediente dele (seg–sex 07:00 às 16:59) e volta à distribuição depois.
  */
 
 const FUSO = "America/Fortaleza";
+const INICIO_REPASSE = 7 * 60; // 07:00
+const FIM_REPASSE = 16 * 60 + 59; // 16:59
 
 /** Data (YYYY-MM-DD) e minutos do dia de um instante, no horário de Fortaleza. */
 function partesEmFortaleza(instante) {
@@ -34,4 +39,22 @@ function foraDoExpediente(instante, datasFeriados) {
   return minutos >= 17 * 60 + 1 || minutos <= 6 * 60 + 59;
 }
 
-module.exports = { foraDoExpediente, partesEmFortaleza };
+/** true se, nesse instante, pedidos sem atendimento da distribuição são do transporte. */
+function noRepasseAoTransporte(instante, datasFeriados) {
+  if (foraDoExpediente(instante, datasFeriados)) return false;
+  const { minutos } = partesEmFortaleza(instante);
+  return minutos >= INICIO_REPASSE && minutos <= FIM_REPASSE;
+}
+
+/**
+ * Quem trata o pedido no instante dado: "transporte" ou "distribuicao".
+ * O pedido precisa de: tipo, criadoEm e rotaId (sem rota = não atendido pela distribuição).
+ */
+function responsavelPelo(pedido, instante, datasFeriados, tiposDistribuicao) {
+  if (!tiposDistribuicao.includes(pedido.tipo)) return "transporte";
+  if (!foraDoExpediente(new Date(pedido.criadoEm), datasFeriados)) return "transporte";
+  if (!pedido.rotaId && noRepasseAoTransporte(instante, datasFeriados)) return "transporte";
+  return "distribuicao";
+}
+
+module.exports = { foraDoExpediente, partesEmFortaleza, responsavelPelo };
