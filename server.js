@@ -549,36 +549,38 @@ function anotarDisponibilidade(lista, campoId) {
   });
 }
 
-/** Marca automaticamente pedidos que passaram 24h do horário de saída como "concluido_sem_saida". */
+// Pedidos que a equipe de transporte ou a distribuição ainda precisa atender e que não saíram.
+// Se passam 24h do horário em que deveriam ter saído, são cancelados automaticamente por não
+// responder em tempo hábil. Aguardando diretoria não entra (quem responde é a diretoria), nem em trânsito.
+const STATUS_SEM_SAIDA = ["pendente", "aceito", "roteirizado"];
+
+/** Horário em que o pedido deveria ter saído: o da rota, se ele já foi roteirizado; senão o desejado. */
+function horarioDeSaidaPrevisto(pedido) {
+  const rota = pedido.rotaId ? estado.rotas.find((r) => r.id === pedido.rotaId) : null;
+  return rota ? rota.horarioSaida : pedido.dataDesejada;
+}
+
+/** Tira o pedido da rota programada; se era o único, a rota sai junto e libera motorista e veículo. */
+function retirarDaRota(pedido) {
+  const rota = pedido.rotaId ? estado.rotas.find((r) => r.id === pedido.rotaId) : null;
+  if (!rota) return;
+  rota.pedidoIds = rota.pedidoIds.filter((id) => id !== pedido.id);
+  if (rota.pedidoIds.length === 0) estado.rotas.splice(estado.rotas.indexOf(rota), 1);
+}
+
+/** Cancela automaticamente os pedidos sem saída que passaram 24h do horário em que sairiam. */
 function marcarPedidosExpirados() {
   const agora = new Date();
   let houveMudanca = false;
 
   estado.pedidos.forEach((pedido) => {
-    // Pedido aguardando análise que passou 24h do horário desejado sem ser analisado: cancela automaticamente
-    if (pedido.status === "aceito") {
-      const horasPassadas = (agora.getTime() - new Date(pedido.dataDesejada).getTime()) / (1000 * 60 * 60);
-      if (horasPassadas > 24) {
-        cancelarPedidoComMotivo(pedido, "sem_resposta");
-        houveMudanca = true;
-      }
-      return;
-    }
+    if (!STATUS_SEM_SAIDA.includes(pedido.status)) return;
+    const horasPassadas = (agora.getTime() - new Date(horarioDeSaidaPrevisto(pedido)).getTime()) / (1000 * 60 * 60);
+    if (horasPassadas <= 24) return;
 
-    // Só processa pedidos que ainda não foram concluídos ou rejeitados
-    if (["pendente", "aguardando_diretoria", "roteirizado", "em_transito"].includes(pedido.status)) {
-      const dataDesejada = new Date(pedido.dataDesejada);
-      const horasPassadas = (agora.getTime() - dataDesejada.getTime()) / (1000 * 60 * 60);
-
-      console.log(`[Debug] Pedido ${pedido.id}: ${horasPassadas.toFixed(2)}h (${pedido.status})`);
-
-      // Se passou mais de 24h do horário de saída desejado, marcar como concluído sem saída
-      if (horasPassadas > 24) {
-        console.log(`[Auto-complete] Marcando ${pedido.id} como concluido_sem_saida`);
-        atualizarPedido(pedido.id, { status: "concluido_sem_saida" });
-        houveMudanca = true;
-      }
-    }
+    retirarDaRota(pedido);
+    cancelarPedidoComMotivo(pedido, "sem_resposta", { rotaId: null });
+    houveMudanca = true;
   });
 
   // Salvar apenas se houve mudança para não gravar desnecessariamente

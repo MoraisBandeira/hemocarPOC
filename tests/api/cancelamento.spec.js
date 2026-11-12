@@ -137,3 +137,60 @@ test.describe("Cancelamento pelo solicitante (POST /api/pedidos/:id/cancelar-sol
     expect(resposta.status()).toBe(403);
   });
 });
+
+/** Edita o pedido (como o solicitante faria) para uma data já vencida. */
+async function vencerPedido(request, pedido, dataDesejada) {
+  const resposta = await request.post(`/api/pedidos/${pedido.id}/editar`, {
+    data: { solicitante: pedido.solicitante, origem: pedido.origem, destino: pedido.destino, tipo: pedido.tipo, dataDesejada },
+  });
+  expect(resposta.ok()).toBeTruthy();
+}
+
+test.describe("Cancelamento automático por atraso de 24h (sem saída)", () => {
+  const VENCIDO = () => paraDatetimeLocal(emHoras(-25));
+
+  test("cancela pedido pendente 24h depois do horário em que deveria ter saído", async ({ request }) => {
+    const pedido = await criarPedidoApi(request, { dataDesejada: paraDatetimeLocal(emHoras(48)) });
+    await vencerPedido(request, pedido, VENCIDO());
+
+    const { pedidos } = await lerEstado(request);
+
+    const cancelado = pedidos.find((p) => p.id === pedido.id);
+    expect(cancelado.status).toBe("cancelado");
+    expect(cancelado.motivoCancelamento).toBe("sem_resposta");
+  });
+
+  test("cancela pedido roteirizado 24h depois da saída da rota e libera a rota vazia", async ({ request }) => {
+    const pedido = await criarPedidoApi(request, { dataDesejada: paraDatetimeLocal(emHoras(48)) });
+    await aceitarPedidoApi(request, pedido.id);
+    const { rota } = await aprovarRotaApi(request, [pedido.id], { horas: -25 });
+
+    const { pedidos, rotas } = await lerEstado(request);
+
+    expect(pedidos.find((p) => p.id === pedido.id).status).toBe("cancelado");
+    expect(rotas.find((r) => r.id === rota.id)).toBeUndefined();
+  });
+
+  test("não cancela pedido já em trânsito", async ({ request }) => {
+    const pedido = await criarPedidoApi(request, { dataDesejada: paraDatetimeLocal(emHoras(48)) });
+    await aceitarPedidoApi(request, pedido.id);
+    const { rota } = await aprovarRotaApi(request, [pedido.id], { horas: 1 });
+    await request.post(`/api/rotas/${rota.id}/saida`, {
+      data: { kmSaida: 1000, horarioSaidaReal: paraDatetimeLocal(emHoras(-25)) },
+    });
+
+    const { pedidos } = await lerEstado(request);
+
+    expect(pedidos.find((p) => p.id === pedido.id).status).toBe("em_transito");
+  });
+
+  test("não cancela pedido aguardando aprovação da diretoria", async ({ request }) => {
+    const pedido = await criarPedidoApi(request, { tipo: "coleta_externa", dataDesejada: paraDatetimeLocal(emHoras(5)) });
+    expect(pedido.status).toBe("aguardando_diretoria");
+    await vencerPedido(request, pedido, VENCIDO());
+
+    const { pedidos } = await lerEstado(request);
+
+    expect(pedidos.find((p) => p.id === pedido.id).status).toBe("aguardando_diretoria");
+  });
+});
