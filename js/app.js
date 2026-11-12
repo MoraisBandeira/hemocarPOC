@@ -99,61 +99,45 @@ const TIPOS_REQUEREM_APROVA_DIRETORIA = [
 
 const CAMPOS_POR_TIPO = {
   amostras_pre_transfusionais: [
-    { id: "tipo_amostra", label: "Tipo de Amostra", type: "text", required: true },
-    { id: "volume_amostra", label: "Volume (ml)", type: "number", required: true },
-    { id: "temperatura_amostra", label: "Temperatura Requerida (°C)", type: "number", required: true },
-    { id: "urgencia_resultado", label: "Urgência do Resultado", type: "select", options: ["Rotina", "Preferencial", "Urgência"], required: true },
+    { id: "prioridade_amostra", label: "Prioridade", type: "select", options: ["Emergência", "Urgência", "Rotina", "Reserva (em sala)", "Reserva (data)"], required: true, ehPrioridade: true },
   ],
   amostras_outras: [
-    { id: "tipo_amostra_outra", label: "Tipo de Amostra", type: "text", required: true },
-    { id: "volume_amostra_outra", label: "Volume (ml)", type: "number", required: false },
-    { id: "temperatura_amostra_outra", label: "Temperatura Requerida", type: "text", required: false },
+    { id: "prioridade_amostra_outras", label: "Prioridade", type: "select", options: ["Emergência", "Urgência", "Rotina", "Reserva (em sala)", "Reserva (data)"], required: true, ehPrioridade: true },
   ],
   coleta_externa: [
-    { id: "local_coleta", label: "Local de Coleta", type: "text", required: true },
+    { id: "local_coleta", label: "Local da Coleta", type: "text", required: true },
     { id: "responsavel_coleta", label: "Responsável pela Coleta", type: "text", required: true },
     { id: "telefone_coleta", label: "Telefone de Contato", type: "tel", required: true },
+    { id: "numero_pessoas_coleta", label: "Número de Pessoas", type: "number", required: true },
+    { id: "tipo_local_coleta", label: "Tipo de Local", type: "select", options: ["Unidade Móvel", "Salas"], required: true },
   ],
   doadores: [
     { id: "quantidade_doadores", label: "Quantidade de Doadores", type: "number", required: true },
-    { id: "tipo_doacao", label: "Tipo de Doação", type: "select", options: ["Sangue Total", "Plaquetas", "Plasma"], required: true },
-    { id: "nome_responsavel", label: "Responsável no Local", type: "text", required: true },
   ],
   equipamentos: [
-    { id: "descricao_equipamento", label: "Descrição/Modelo do Equipamento", type: "text", required: true },
-    { id: "numero_serie", label: "Número de Série", type: "text", required: false },
-    { id: "peso_equipamento", label: "Peso Aproximado (kg)", type: "number", required: false },
-    { id: "dimensoes", label: "Dimensões (comprimento x largura x altura)", type: "text", required: false },
+    { id: "caracteristica_equipamento", label: "Característica", type: "select", options: ["Com KIT", "Sem KIT"], required: true },
   ],
   hemocomponentes: [
-    { id: "tipo_hemocomponente", label: "Tipo de Hemocomponente", type: "select", options: ["Sangue Total", "Concentrado de Hemácias", "Plaquetas", "Plasma", "Crioprecipitado", "Globulina"], required: true },
-    { id: "quantidade_bolsas", label: "Quantidade de Bolsas", type: "number", required: true },
-    { id: "numero_lote", label: "Número do Lote", type: "text", required: true },
-    { id: "data_validade", label: "Data de Validade", type: "date", required: true },
+    { id: "prioridade_hemocomponente", label: "Prioridade", type: "select", options: ["Emergência", "Urgência", "Rotina", "Reserva (em sala)", "Reserva (data)"], required: true, ehPrioridade: true },
   ],
   materiais: [
-    { id: "descricao_material", label: "Descrição do Material", type: "text", required: true },
-    { id: "quantidade_material", label: "Quantidade", type: "number", required: true },
-    { id: "unidade_material", label: "Unidade", type: "select", options: ["Caixa", "Pacote", "Unidade", "Carretilha", "Pallet"], required: true },
-    { id: "peso_material", label: "Peso Total (kg)", type: "number", required: false },
+    { id: "tipo_material", label: "Tipo de Material", type: "text", required: true },
   ],
   medicamentos: [
     { id: "nome_medicamento", label: "Nome do Medicamento", type: "text", required: true },
     { id: "quantidade_medicamento", label: "Quantidade", type: "number", required: true },
-    { id: "numero_lote_med", label: "Número do Lote", type: "text", required: true },
-    { id: "data_validade_med", label: "Data de Validade", type: "date", required: true },
-    { id: "temperatura_medicamento", label: "Temperatura Requerida", type: "text", required: false },
+    { id: "contato_medicamento", label: "Contato do Local de Entrega ou Coleta", type: "text", required: true },
   ],
   pessoal_administrativo: [
-    { id: "nome_pessoa", label: "Nome da Pessoa", type: "text", required: true },
-    { id: "departamento", label: "Departamento/Setor", type: "text", required: true },
-    { id: "telefone_pessoa", label: "Telefone de Contato", type: "tel", required: true },
-    { id: "motivo_deslocamento", label: "Motivo do Deslocamento", type: "text", required: true },
+    { id: "quantidade_passageiros_adm", label: "Quantidade de Passageiros", type: "number", required: true },
+    { id: "nomes_passageiros_adm", label: "Nome(s) do(s) Passageiro(s)", type: "textarea", required: true },
+    { id: "setor_passageiro_adm", label: "Setor do Passageiro", type: "text", required: true },
+    { id: "motivo_deslocamento_adm", label: "Motivo do Deslocamento", type: "text", required: true },
   ],
   pessoal_tecnico: [
-    { id: "nome_tecnico", label: "Nome do Técnico", type: "text", required: true },
-    { id: "especialidade", label: "Especialidade/Função", type: "text", required: true },
-    { id: "telefone_tecnico", label: "Telefone de Contato", type: "tel", required: true },
+    { id: "quantidade_passageiros_tec", label: "Quantidade de Passageiros", type: "number", required: true },
+    { id: "nomes_passageiros_tec", label: "Nome(s) do(s) Passageiro(s)", type: "textarea", required: true },
+    { id: "setor_passageiro_tec", label: "Setor do Passageiro", type: "text", required: true },
     { id: "motivo_deslocamento_tec", label: "Motivo do Deslocamento", type: "text", required: true },
   ],
 };
@@ -354,6 +338,19 @@ function viewSolicitarPerfil(mensagem) {
   `;
 }
 
+/** Campo de prioridade do tipo (dentro de Informações Específicas); null se o tipo não tiver. */
+function campoPrioridade(tipo) {
+  return (CAMPOS_POR_TIPO[tipo] || []).find((campo) => campo.ehPrioridade) || null;
+}
+
+/** Selo de prioridade do pedido: o valor do campo de prioridade do tipo; senão a prioridade geral gravada. */
+function seloPrioridade(pedido) {
+  const campo = campoPrioridade(pedido.tipo);
+  const valorEspecifico = campo && (pedido.camposEspecificos || {})[campo.id];
+  if (valorEspecifico) return `<span class="badge">${escapeHtml(valorEspecifico)}</span>`;
+  return `<span class="badge prioridade-${pedido.prioridade}">${ROTULO_PRIORIDADE[pedido.prioridade] || pedido.prioridade}</span>`;
+}
+
 /** Campos específicos do tipo; `valores` preenche os já gravados no pedido (usado na edição). */
 function renderCamposDinamicos(tipoSelecionado, valores = {}) {
   const campos = CAMPOS_POR_TIPO[tipoSelecionado] || [];
@@ -374,6 +371,15 @@ function renderCamposDinamicos(tipoSelecionado, valores = {}) {
                 <option value="">Selecione</option>
                 ${campo.options.map(opt => `<option value="${escapeHtml(opt)}" ${opt === valores[campo.id] ? "selected" : ""}>${escapeHtml(opt)}</option>`).join("")}
               </select>
+            </div>
+          `;
+        }
+
+        if (campo.type === "textarea") {
+          return `
+            <div class="campo">
+              <label for="${campo.id}">${escapeHtml(campo.label)}${requiredLabel}</label>
+              <textarea id="${campo.id}" name="${campo.id}" ${required}>${escapeHtml(valores[campo.id] ?? "")}</textarea>
             </div>
           `;
         }
@@ -454,15 +460,6 @@ function viewNovoPedido() {
               <option value="medicamentos">Medicamentos</option>
               <option value="pessoal_administrativo">Pessoal Administrativo</option>
               <option value="pessoal_tecnico">Pessoal Técnico</option>
-            </select>
-          </div>
-          <div class="campo">
-            <label for="prioridade">Prioridade</label>
-            <select id="prioridade" name="prioridade">
-              <option value="normal">Normal</option>
-              <option value="baixa">Baixa</option>
-              <option value="alta">Alta</option>
-              <option value="urgente">Urgente</option>
             </select>
           </div>
           <div class="campo full">
@@ -651,7 +648,8 @@ function blocoAcoesSolicitante(pedido, rota) {
 /** Campos específicos do tipo já preenchidos no pedido (ex.: tipo de amostra, volume), para as listagens. */
 function blocoCamposEspecificos(pedido) {
   const valores = pedido.camposEspecificos || {};
-  const preenchidos = (CAMPOS_POR_TIPO[pedido.tipo] || []).filter((campo) => valores[campo.id]);
+  // a prioridade já aparece no selo do card, então não repete aqui
+  const preenchidos = (CAMPOS_POR_TIPO[pedido.tipo] || []).filter((campo) => valores[campo.id] && !campo.ehPrioridade);
   if (preenchidos.length === 0) return "";
   return `
     <dl class="card-corpo" style="margin-top:10px;">
@@ -668,9 +666,6 @@ function formularioEditarPedido(pedido) {
     .join("");
   const opcoesTipo = Object.keys(CAMPOS_POR_TIPO)
     .map((tipo) => `<option value="${tipo}" ${tipo === pedido.tipo ? "selected" : ""}>${escapeHtml(ROTULO_TIPO_PEDIDO[tipo] || tipo)}</option>`)
-    .join("");
-  const opcoesPrioridade = Object.entries(ROTULO_PRIORIDADE)
-    .map(([valor, rotulo]) => `<option value="${valor}" ${valor === pedido.prioridade ? "selected" : ""}>${rotulo}</option>`)
     .join("");
 
   return `
@@ -694,10 +689,6 @@ function formularioEditarPedido(pedido) {
           <div class="campo">
             <label for="tipoEditar-${pedido.id}">Tipo de solicitação</label>
             <select id="tipoEditar-${pedido.id}" name="tipo" required>${opcoesTipo}</select>
-          </div>
-          <div class="campo">
-            <label for="prioridadeEditar-${pedido.id}">Prioridade</label>
-            <select id="prioridadeEditar-${pedido.id}" name="prioridade">${opcoesPrioridade}</select>
           </div>
           <div class="campo full">
             <label for="observacoesEditar-${pedido.id}">Observações</label>
@@ -752,7 +743,7 @@ function cardPedidoSolicitante(pedido, rotas, motoristas, veiculos) {
         </div>
         <div>
           <span class="badge ${pedido.status}">${ROTULO_STATUS_PEDIDO[pedido.status]}</span>
-          <span class="badge prioridade-${pedido.prioridade}">${ROTULO_PRIORIDADE[pedido.prioridade] || pedido.prioridade}</span>
+          ${seloPrioridade(pedido)}
         </div>
       </div>
       <dl class="card-corpo">
@@ -821,7 +812,7 @@ function cardAceitarSolicitacao(pedido) {
           <div class="card-meta">Solicitado por ${escapeHtml(pedido.solicitante)} em ${formatarData(pedido.criadoEm)}</div>
         </div>
         <div>
-          <span class="badge prioridade-${pedido.prioridade}">${ROTULO_PRIORIDADE[pedido.prioridade] || pedido.prioridade}</span>
+          ${seloPrioridade(pedido)}
         </div>
       </div>
       <dl class="card-corpo">
@@ -1188,7 +1179,7 @@ function cardPedidoAnalise(pedido, infoGrupo) {
         </label>
         <div>
           <span class="badge ${pedido.status}">${ROTULO_STATUS_PEDIDO[pedido.status]}</span>
-          <span class="badge prioridade-${pedido.prioridade}">${ROTULO_PRIORIDADE[pedido.prioridade] || pedido.prioridade}</span>
+          ${seloPrioridade(pedido)}
           ${pedido.tipoTransporte ? `<span class="badge" style="background-color: #7c3aed;">${pedido.tipoTransporte === "hemoce" ? "🏥 Hemoce" : "🚗 Terceiros"}</span>` : ""}
           ${selosGrupo}
         </div>
@@ -1526,7 +1517,7 @@ function cardPedidoDiretoria(pedido) {
         </div>
         <div>
           <span class="badge high">⏰ ${tempoRestante}</span>
-          <span class="badge prioridade-${pedido.prioridade}">${ROTULO_PRIORIDADE[pedido.prioridade] || pedido.prioridade}</span>
+          ${seloPrioridade(pedido)}
         </div>
       </div>
       <dl class="card-corpo">

@@ -109,12 +109,12 @@ test.describe("Equipe de Transporte (interface)", () => {
 
 test.describe("Listagem de pedidos com campos específicos (interface)", () => {
   test("Aceitar Solicitações mostra os dados específicos do pedido", async ({ page, request }) => {
-    await criarPedidoApi(request, { camposEspecificos: { tipo_amostra: "Plasma" } });
+    await criarPedidoApi(request, { tipo: "amostras_pre_transfusionais", camposEspecificos: { prioridade_amostra: "Emergência" } });
     await abrirComoPerfil(page, "transporte");
     await irParaAba(page, "Aceitar Solicitações");
 
-    await expect(page.locator("#conteudo")).toContainText("Tipo de Amostra");
-    await expect(page.locator("#conteudo")).toContainText("Plasma");
+    // a prioridade própria do tipo aparece no selo do card, sem repetir o rótulo
+    await expect(page.locator("#conteudo")).toContainText("Emergência");
   });
 });
 

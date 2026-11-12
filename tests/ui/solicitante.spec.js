@@ -69,15 +69,16 @@ test.describe("Solicitante (interface)", () => {
   });
 
   test("o formulário de edição já traz os campos específicos gravados", async ({ page, request }) => {
-    await criarPedidoApi(request, { solicitante: "Maria Souza", camposEspecificos: { tipo_amostra: "Sangue total", volume_amostra: "12" } });
+    await criarPedidoApi(request, { solicitante: "Maria Souza", tipo: "amostras_pre_transfusionais", camposEspecificos: { prioridade_amostra: "Urgência" } });
     await abrirComoPerfil(page, "solicitante");
     await irParaAba(page, "Meus Pedidos");
-    await expect(page.locator("#conteudo")).toContainText("Sangue total");
+    await expect(page.locator("#conteudo")).toContainText("Urgência");
 
     await page.getByRole("button", { name: "Editar" }).click();
 
-    await expect(page.locator('form[data-form="editar-pedido"] #tipo_amostra')).toHaveValue("Sangue total");
-    await expect(page.locator('form[data-form="editar-pedido"] #volume_amostra')).toHaveValue("12");
+    await expect(page.locator('form[data-form="editar-pedido"] #prioridade_amostra')).toHaveValue("Urgência");
+    // a prioridade fica dentro de Informações Específicas, sem campo geral separado
+    await expect(page.locator('form[data-form="editar-pedido"] select[name="prioridade"]')).toHaveCount(0);
   });
 
   test("mostra Editar depois que a diretoria aprovou", async ({ page, request }) => {
