@@ -23,12 +23,10 @@ const TABS_POR_PERFIL = {
     { id: "aceitar", label: "Aceitar Solicitações" },
     { id: "analise", label: "Análise de Pedidos" },
     { id: "rotas", label: "Rotas Programadas" },
-    { id: "cadastros", label: "Cadastros" },
   ],
   distribuicao: [
     { id: "analise", label: "Análise de Pedidos" },
     { id: "rotas", label: "Rotas Programadas" },
-    { id: "cadastros", label: "Cadastros" },
   ],
   portaria: [
     { id: "portariaSaida", label: "Aguardando saída" },
@@ -38,6 +36,9 @@ const TABS_POR_PERFIL = {
   diretoria: [
     { id: "aprovacaoDiretoria", label: "Aprovação de Solicitações" },
     { id: "analiseRetorno", label: "Análise Geral" },
+  ],
+  administrador: [
+    { id: "cadastros", label: "Cadastros" },
   ],
 };
 
@@ -165,6 +166,8 @@ const estado = {
   menuPerfilAberto: false,
   notifOSAberto: false,
   pagina: 1, // página atual da lista paginada da aba em exibição
+  paginaCadastros: { motoristas: 1, veiculos: 1, hospitais: 1 }, // página de cada lista da aba Cadastros
+  filtrosCadastros: { motoristas: "", veiculos: "", hospitais: "" }, // texto da busca de cada lista
 };
 
 function limparSelecaoAnalise() {
@@ -188,13 +191,14 @@ function paginar(lista, pagina) {
   };
 }
 
-function renderPaginacao({ paginaAtual, totalPaginas, total }) {
+function renderPaginacao({ paginaAtual, totalPaginas, total }, lista = null) {
   if (totalPaginas <= 1) return "";
+  const alvo = lista ? `data-pagina-lista="${lista}"` : "";
   return `
     <div class="paginacao">
-      <button type="button" class="btn secundario pequeno" data-pagina="${paginaAtual - 1}" ${paginaAtual === 1 ? "disabled" : ""}>‹ Anterior</button>
+      <button type="button" class="btn secundario pequeno" ${alvo} data-pagina="${paginaAtual - 1}" ${paginaAtual === 1 ? "disabled" : ""}>‹ Anterior</button>
       <span class="paginacao-info">Página ${paginaAtual} de ${totalPaginas} · ${total} ${total === 1 ? "item" : "itens"}</span>
-      <button type="button" class="btn secundario pequeno" data-pagina="${paginaAtual + 1}" ${paginaAtual === totalPaginas ? "disabled" : ""}>Próxima ›</button>
+      <button type="button" class="btn secundario pequeno" ${alvo} data-pagina="${paginaAtual + 1}" ${paginaAtual === totalPaginas ? "disabled" : ""}>Próxima ›</button>
     </div>
   `;
 }
@@ -406,7 +410,7 @@ function viewNovoPedido() {
     return `
       <section class="painel">
         <h2>Novo pedido de transporte</h2>
-        <div class="vazio">Nenhum endereço cadastrado ainda. Peça para a Equipe de Transporte cadastrar os locais (hospitais, hemocentros etc.) na aba "Cadastros" antes de criar um pedido.</div>
+        <div class="vazio">Nenhum endereço cadastrado ainda. Peça para o administrador cadastrar os locais (hospitais, hemocentros etc.) na aba "Cadastros" (perfil Administrador) antes de criar um pedido.</div>
       </section>
     `;
   }
@@ -1084,7 +1088,7 @@ function barraSelecaoLote(pendentes, motoristas, veiculos) {
       <div class="analise-form">
         <h4>Aprovar ${n} pedido${n === 1 ? "" : "s"} numa rota</h4>
         ${avisoAgrupamentoPessoal}
-        ${semCadastro ? `<p class="card-obs">Cadastre ao menos um motorista e um veículo na aba "Cadastros" antes de aprovar.</p>` : `
+        ${semCadastro ? `<p class="card-obs">Cadastre ao menos um motorista e um veículo na aba "Cadastros" (perfil Administrador) antes de aprovar.</p>` : `
           <p class="card-obs">Motoristas e veículos já em outra rota também aparecem na lista — pode escalar, desde que o horário não se sobreponha.</p>
         `}
         <form data-form="aprovar-lote">
@@ -1624,13 +1628,41 @@ function secaoFeriados() {
   `;
 }
 
-function viewCadastros() {
-  const motoristas = DB.listarMotoristas();
-  const veiculos = DB.listarVeiculos();
-  const hospitais = DB.listarHospitais();
+/** Texto para comparar na busca: sem maiúsculas e sem acentos. */
+function normalizarBusca(texto) {
+  return String(texto ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
 
-  const linhasMotoristas = motoristas.length
-    ? motoristas.map((m) => `
+/** Mantém os itens em que algum dos campos (de `camposDo`) contém o termo buscado. */
+function filtrarCadastro(lista, termo, camposDo) {
+  const busca = normalizarBusca(termo);
+  if (!busca) return lista;
+  return lista.filter((item) => camposDo(item).some((valor) => normalizarBusca(valor).includes(busca)));
+}
+
+/** Campo de busca acima de uma lista de cadastro; mantém o texto digitado ao redesenhar. */
+function campoBuscaCadastro(lista, placeholder) {
+  return `<input type="search" data-busca-cadastro="${lista}" value="${escapeHtml(estado.filtrosCadastros[lista])}" placeholder="${placeholder}" aria-label="${placeholder}" style="margin-bottom:12px;" />`;
+}
+
+function viewCadastros() {
+  const filtros = estado.filtrosCadastros;
+  const pMotoristas = paginar(
+    filtrarCadastro(DB.listarMotoristas(), filtros.motoristas, (m) => [m.nome, m.cnh]),
+    estado.paginaCadastros.motoristas
+  );
+  const pVeiculos = paginar(
+    filtrarCadastro(DB.listarVeiculos(), filtros.veiculos, (v) => [v.placa, v.modelo, v.capacidade]),
+    estado.paginaCadastros.veiculos
+  );
+  const pHospitais = paginar(
+    filtrarCadastro(DB.listarHospitais(), filtros.hospitais, (h) => [h.nome, h.cidade, h.regional, h.endereco, h.telefone]),
+    estado.paginaCadastros.hospitais
+  );
+  const semResultado = (termo, cadastrado) => (termo ? "Nenhum resultado para a busca." : cadastrado);
+
+  const linhasMotoristas = pMotoristas.total
+    ? pMotoristas.itens.map((m) => `
         <tr>
           <td>${escapeHtml(m.nome)}</td>
           <td>${escapeHtml(m.cnh)}</td>
@@ -1638,10 +1670,10 @@ function viewCadastros() {
           <td><button class="btn secundario pequeno" data-remover-motorista="${m.id}">Remover</button></td>
         </tr>
       `).join("")
-    : `<tr><td colspan="4">Nenhum motorista cadastrado.</td></tr>`;
+    : `<tr><td colspan="4">${semResultado(filtros.motoristas, "Nenhum motorista cadastrado.")}</td></tr>`;
 
-  const linhasVeiculos = veiculos.length
-    ? veiculos.map((v) => `
+  const linhasVeiculos = pVeiculos.total
+    ? pVeiculos.itens.map((v) => `
         <tr>
           <td>${escapeHtml(v.placa)}</td>
           <td>${escapeHtml(v.modelo)}</td>
@@ -1650,10 +1682,10 @@ function viewCadastros() {
           <td><button class="btn secundario pequeno" data-remover-veiculo="${v.id}">Remover</button></td>
         </tr>
       `).join("")
-    : `<tr><td colspan="5">Nenhum veículo cadastrado.</td></tr>`;
+    : `<tr><td colspan="5">${semResultado(filtros.veiculos, "Nenhum veículo cadastrado.")}</td></tr>`;
 
-  const linhasHospitais = hospitais.length
-    ? hospitais.map((h) => `
+  const linhasHospitais = pHospitais.total
+    ? pHospitais.itens.map((h) => `
         <tr>
           <td>${escapeHtml(h.nome)}</td>
           <td>${escapeHtml(h.cidade)}</td>
@@ -1663,18 +1695,20 @@ function viewCadastros() {
           <td><button class="btn secundario pequeno" data-remover-hospital="${h.id}">Remover</button></td>
         </tr>
       `).join("")
-    : `<tr><td colspan="6">Nenhum hospital cadastrado.</td></tr>`;
+    : `<tr><td colspan="6">${semResultado(filtros.hospitais, "Nenhum hospital cadastrado.")}</td></tr>`;
 
   return `
     <div class="duas-colunas">
       <section class="painel">
         <h2>Motoristas</h2>
+        ${campoBuscaCadastro("motoristas", "Buscar por nome ou CNH")}
         <div style="overflow-x:auto;">
           <table class="tabela-simples">
             <thead><tr><th>Nome</th><th>CNH</th><th>Status</th><th></th></tr></thead>
             <tbody>${linhasMotoristas}</tbody>
           </table>
         </div>
+        ${renderPaginacao(pMotoristas, "motoristas")}
         <form id="formMotorista" class="form-grid" style="margin-top:16px;">
           <div class="campo">
             <label for="nomeMotorista">Nome</label>
@@ -1692,12 +1726,14 @@ function viewCadastros() {
 
       <section class="painel">
         <h2>Veículos</h2>
+        ${campoBuscaCadastro("veiculos", "Buscar por placa, modelo ou capacidade")}
         <div style="overflow-x:auto;">
           <table class="tabela-simples">
             <thead><tr><th>Placa</th><th>Modelo</th><th>Capacidade</th><th>Status</th><th></th></tr></thead>
             <tbody>${linhasVeiculos}</tbody>
           </table>
         </div>
+        ${renderPaginacao(pVeiculos, "veiculos")}
         <form id="formVeiculo" class="form-grid" style="margin-top:16px;">
           <div class="campo">
             <label for="placaVeiculo">Placa</label>
@@ -1719,12 +1755,14 @@ function viewCadastros() {
 
       <section class="painel">
         <h2>Hospitais</h2>
+        ${campoBuscaCadastro("hospitais", "Buscar por nome, cidade, regional, endereço ou telefone")}
         <div style="overflow-x:auto;">
           <table class="tabela-simples">
             <thead><tr><th>Nome</th><th>Cidade</th><th>Regional</th><th>Endereço</th><th>Telefone</th><th></th></tr></thead>
             <tbody>${linhasHospitais}</tbody>
           </table>
         </div>
+        ${renderPaginacao(pHospitais, "hospitais")}
         <form id="formHospital" class="form-grid" style="margin-top:16px;">
           <div class="campo">
             <label for="nomeHospital">Nome</label>
@@ -1753,7 +1791,7 @@ function viewCadastros() {
         <p class="card-obs" style="margin-top:10px;">A regional é usada nas sugestões de agrupamento de rota (aba "Análise de Pedidos") como uma zona mais ampla que a cidade — hospitais de cidades diferentes na mesma regional entram na mesma sugestão.</p>
       </section>
     </div>
-    ${estado.perfil === "transporte" ? secaoFeriados() : ""}
+    ${estado.perfil === "administrador" ? secaoFeriados() : ""}
   `;
 }
 
@@ -1762,9 +1800,23 @@ function viewCadastros() {
 function ligarEventosDaAba() {
   const main = document.getElementById("conteudo");
 
+  main.querySelectorAll("[data-busca-cadastro]").forEach((input) => {
+    input.addEventListener("input", (ev) => {
+      const lista = ev.target.dataset.buscaCadastro;
+      estado.filtrosCadastros[lista] = ev.target.value;
+      estado.paginaCadastros[lista] = 1;
+      renderConteudo();
+      // a tela foi redesenhada: devolve o foco e o cursor ao campo que estava sendo digitado
+      const campo = document.querySelector(`[data-busca-cadastro="${lista}"]`);
+      campo?.focus();
+      campo?.setSelectionRange(campo.value.length, campo.value.length);
+    });
+  });
+
   main.querySelectorAll("[data-pagina]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      estado.pagina = Number(btn.dataset.pagina);
+      if (btn.dataset.paginaLista) estado.paginaCadastros[btn.dataset.paginaLista] = Number(btn.dataset.pagina);
+      else estado.pagina = Number(btn.dataset.pagina);
       renderConteudo();
     });
   });

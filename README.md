@@ -61,7 +61,7 @@ Em qualquer uma das opções, o app continua guardando tudo em `data/db.json` de
 
 ## Como usar
 
-1. No topo, selecione o **perfil ativo**: "Solicitante", "Equipe de Transporte" ou "Portaria".
+1. No topo, selecione o **perfil ativo**: "Solicitante", "Equipe de Transporte", "Distribuição (Noite/Fds)", "Portaria", "Diretoria" ou "Administrador".
 2. **Como Solicitante:**
    - Na primeira vez, informe **nome e setor/unidade** (simula os dados do usuário logado). Esses dados ficam salvos no navegador e aparecem no chip "👤" no topo — clique nele a qualquer momento para alterá-los.
    - Aba "Novo Pedido": escolha **origem e destino em listas** (alimentadas pelo cadastro de Hospitais/endereços — não dá mais para digitar um texto livre), preencha data/hora desejada, tipo e prioridade, e envie. O solicitante e o setor já vêm do seu perfil, sem precisar digitar de novo. Se não houver nenhum endereço cadastrado, o formulário avisa e pede pra Equipe de Transporte cadastrar em "Cadastros" antes.
@@ -71,15 +71,18 @@ Em qualquer uma das opções, o app continua guardando tudo em `data/db.json` de
    - **Sugestões de agrupamento**: quando dois ou mais pedidos pendentes têm o mesmo destino, ou destinos diferentes na mesma **regional** (uma zona administrativa mais ampla que a cidade — pode juntar várias cidades vizinhas, ex.: "Regional Cariri" cobrindo Juazeiro do Norte, Crato etc.), **e o horário desejado de cada um está a até 3h de diferença do próximo** (pedidos de manhã não se misturam com os da noite, mesmo pro mesmo lugar), aparece um painel "Sugestões para agrupar numa rota" no topo da lista — com a faixa de horário coberta e um botão "Selecionar todos" para marcar o grupo inteiro de uma vez. Cada pedido que faz parte de um grupo também ganha um selo (📍 mesmo destino / 🗺️ mesma região) direto no card. Como o destino agora vem sempre de um endereço cadastrado (ver acima), essa identificação é sempre exata; sem regional cadastrada para aquele hospital, cai para a cidade dele.
    - Aba "Rotas Programadas": lista as rotas geradas — cada rota mostra todos os pedidos (paradas) que ela atende, o horário de saída e a previsão de término, além do status (Programada / Em trânsito / Concluída) e do KM/horário reais assim que a Portaria os registra. Uma rota ainda não concluída pode ser **editada** (motorista, veículo, horário, previsão) a qualquer momento — os solicitantes envolvidos são avisados da mudança. A conclusão da rota em si (saída/chegada) é responsabilidade da Portaria, não mais um botão aqui.
    - **Escalar motorista/veículo já em rota**: ao aprovar ou editar, a lista mostra todo mundo, inclusive quem já está em outra rota (com a etiqueta "em rota até HH:mm") — dá pra escalar mesmo assim, desde que o novo horário não se sobreponha ao da rota existente. Se sobrepuser, o pedido é recusado com uma mensagem explicando o conflito.
-   - Aba "Cadastros": CRUD simples de Motoristas, Veículos e **Hospitais** (nome, cidade, **regional**, endereço, telefone) usados na operação. O status de cada motorista/veículo (Disponível / Em rota até HH:mm) é calculado na hora, a partir das rotas programadas — não precisa mexer manualmente.
-4. **Como Portaria:**
+4. **Como Administrador:**
+   - Aba "Cadastros" (única aba deste perfil): CRUD simples de Motoristas, Veículos e **Hospitais** (nome, cidade, **regional**, endereço, telefone) usados na operação, mais os **feriados** que valem para a distribuição. O status de cada motorista/veículo (Disponível / Em rota até HH:mm) é calculado na hora, a partir das rotas programadas — não precisa mexer manualmente.
+   - Cada lista tem uma busca (nome, CNH, placa, modelo, cidade, regional etc., sem diferenciar maiúsculas nem acentos) e paginação própria, de 5 em 5.
+   - Equipe de Transporte e Distribuição não têm mais a aba Cadastros; eles usam os cadastros já feitos ao aprovar rotas.
+5. **Como Portaria:**
    - Aba "Aguardando saída": lista as rotas já aprovadas que ainda não saíram. **Registrar saída** pede o **KM do odômetro** e o **horário** reais de saída (o formulário já sugere o horário atual) — a partir daí a rota vira "Em trânsito" e o motorista/veículo somem da lista de disponíveis.
    - Aba "Em trânsito": lista as rotas que já saíram e ainda não voltaram. **Registrar chegada** pede o **KM** e o **horário** reais de chegada — o KM de chegada não pode ser menor que o de saída, nem o horário de chegada anterior ao de saída. Isso conclui a rota, libera motorista e veículo, e avisa cada solicitante envolvido.
    - Aba "Histórico": rotas já concluídas, com o registro completo de saída e chegada (KM e horário), para consulta/auditoria.
 
 O botão "Restaurar dados de exemplo" no rodapé apaga tudo no servidor e recria a base inicial (3 motoristas, 3 veículos, 5 hospitais) para todo mundo conectado.
 
-**Paginação**: as listas "Meus Pedidos", "Análise de Pedidos" e "Rotas Programadas" mostram 5 itens por página, com botões "Anterior/Próxima" quando há mais que isso. A página volta para 1 ao trocar de aba ou de perfil; na Análise, marcar pedidos numa página e navegar para outra não perde a seleção.
+**Paginação**: as listas "Meus Pedidos", "Análise de Pedidos", "Rotas Programadas" e as de Cadastros (motoristas, veículos e hospitais) mostram 5 itens por página, com botões "Anterior/Próxima" quando há mais que isso. A página volta para 1 ao trocar de aba ou de perfil; na Análise, marcar pedidos numa página e navegar para outra não perde a seleção.
 
 ## Central de notificações (por destinatário) e alerta de novo pedido
 

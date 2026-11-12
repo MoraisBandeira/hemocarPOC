@@ -69,7 +69,7 @@ test.describe("Equipe de Transporte (interface)", () => {
   });
 
   test("cadastra e remove um motorista na aba Cadastros", async ({ page, request }) => {
-    await abrirComoPerfil(page, "transporte");
+    await abrirComoPerfil(page, "administrador");
     await irParaAba(page, "Cadastros");
 
     await page.fill("#nomeMotorista", "Ana Ribeiro");
@@ -88,7 +88,7 @@ test.describe("Equipe de Transporte (interface)", () => {
   });
 
   test("cadastra e remove um feriado na aba Cadastros", async ({ page, request }) => {
-    await abrirComoPerfil(page, "transporte");
+    await abrirComoPerfil(page, "administrador");
     await irParaAba(page, "Cadastros");
 
     await page.fill("#dataFeriado", "2026-11-02");

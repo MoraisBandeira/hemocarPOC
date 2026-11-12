@@ -77,7 +77,7 @@ test.describe("Fluxo da Equipe de Transporte", () => {
   });
 
   test("cadastra um hospital novo na aba Cadastros", async ({ page, request }) => {
-    await abrirComoPerfil(page, "transporte");
+    await abrirComoPerfil(page, "administrador");
     await irParaAba(page, "Cadastros");
 
     await page.fill("#nomeHospital", "Hemocentro de Teste");

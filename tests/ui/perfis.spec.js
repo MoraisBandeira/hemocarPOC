@@ -7,8 +7,8 @@ test.beforeEach(async ({ request }) => {
 
 const ABAS_POR_PERFIL = {
   solicitante: ["Novo Pedido", "Meus Pedidos"],
-  transporte: ["Aceitar Solicitações", "Análise de Pedidos", "Rotas Programadas", "Cadastros"],
-  distribuicao: ["Análise de Pedidos", "Rotas Programadas", "Cadastros"],
+  transporte: ["Aceitar Solicitações", "Análise de Pedidos", "Rotas Programadas"],
+  distribuicao: ["Análise de Pedidos", "Rotas Programadas"],
   portaria: ["Aguardando saída", "Em trânsito", "Histórico"],
   diretoria: ["Aprovação de Solicitações", "Análise Geral"],
 };

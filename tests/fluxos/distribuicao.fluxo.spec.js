@@ -20,10 +20,10 @@ test.describe("Fluxo da Distribuição (Noite/Fds)", () => {
     await expect(page.locator(`[data-iniciar-analise="cancelar"][data-pedido-id="${oculto.id}"]`)).toHaveCount(0);
   });
 
-  test("tem só as abas de análise, rotas e cadastros", async ({ page }) => {
+  test("tem só as abas de análise e rotas", async ({ page }) => {
     await abrirComoPerfil(page, "distribuicao");
 
-    await expect(page.locator("#tabs .tab-btn")).toHaveText(["Análise de Pedidos", "Rotas Programadas", "Cadastros"]);
+    await expect(page.locator("#tabs .tab-btn")).toHaveText(["Análise de Pedidos", "Rotas Programadas"]);
   });
 
   test("escala um pedido de medicamentos sem o aceite do transporte", async ({ page, request }) => {
@@ -75,7 +75,7 @@ test.describe("Fluxo da Distribuição (Noite/Fds)", () => {
   });
 
   test("consulta os motoristas e veículos cadastrados", async ({ page }) => {
-    await abrirComoPerfil(page, "distribuicao");
+    await abrirComoPerfil(page, "administrador");
     await irParaAba(page, "Cadastros");
 
     await expect(page.locator("#conteudo")).toContainText("Carlos Andrade");
